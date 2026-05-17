@@ -1,5 +1,12 @@
 package com.android.purebilibili.feature.following
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -19,6 +26,8 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +59,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.android.purebilibili.core.util.PinyinUtils
 
 // UI 状态
@@ -101,6 +111,7 @@ data class BatchFollowGroupDialogData(
 private const val SPECIAL_FOLLOW_TAG_ID = -10L
 private const val DEFAULT_FOLLOW_TAG_ID = 0L
 private const val FOLLOW_GROUP_META_FETCH_INTERVAL_MS = 80L
+private const val FOLLOWING_PAGE_PUBLISH_INTERVAL_PAGES = 3
 private const val BATCH_UNFOLLOW_INTERVAL_MS = 320L
 private const val BATCH_UNFOLLOW_MAX_ATTEMPTS = 3
 private const val BATCH_UNFOLLOW_RETRY_BASE_DELAY_MS = 900L
@@ -266,6 +277,7 @@ class FollowingListViewModel : ViewModel() {
                 // 计算需要加载的总页数
                 val totalPages = (total + pageSize - 1) / pageSize
                 val startPage = (currentUsers.size / pageSize + 1).coerceAtLeast(2)
+                var pagesSinceLastPublish = 0
 
                 (_uiState.value as? FollowingListUiState.Success)?.let { current ->
                     if (current.users.size < total) {
@@ -284,21 +296,19 @@ class FollowingListViewModel : ViewModel() {
                         val newUsers = response.data.list.orEmpty()
                             .filterNot { removedUserMids.contains(it.mid) }
                         if (newUsers.isNotEmpty()) {
-                            currentUsers = mergeFollowingUsersDistinct(
-                                currentUsers = currentUsers,
-                                incomingUsers = newUsers,
-                                removedUserMids = removedUserMids
-                            ).toMutableList()
-                            
-                            // 更新 UI 状态
-                            _uiState.value = FollowingListUiState.Success(
-                                users = currentUsers.toList(), // Create new list to trigger recomposition
-                                total = total,
-                                hasMore = isFollowingListIncomplete(currentUsers.size, total),
-                                isLoadingMore = true // 显示正在后台加载
-                            )
-                            persistFollowingCache(mid = mid, total = total, users = currentUsers)
-                            refreshFollowGroupMetadata(currentUsers)
+                            currentUsers = mergeFollowingUsersOffMain(currentUsers, newUsers)
+                            pagesSinceLastPublish += 1
+
+                            if (shouldPublishFollowingLoadBatch(
+                                    loadedCount = currentUsers.size,
+                                    total = total,
+                                    pagesSinceLastPublish = pagesSinceLastPublish,
+                                    publishIntervalPages = FOLLOWING_PAGE_PUBLISH_INTERVAL_PAGES
+                                )
+                            ) {
+                                publishFollowingUsers(mid, total, currentUsers, isLoadingMore = true)
+                                pagesSinceLastPublish = 0
+                            }
                         } else {
                             break
                         }
@@ -309,25 +319,10 @@ class FollowingListViewModel : ViewModel() {
 
                 if (mid == currentMid && isFollowingListIncomplete(currentUsers.size, total)) {
                     ActionRepository.getAllFollowGroupUsers().onSuccess { allUsers ->
-                        val mergedUsers = mergeFollowingUsersDistinct(
-                            currentUsers = currentUsers,
-                            incomingUsers = allUsers,
-                            removedUserMids = removedUserMids
-                        )
+                        val mergedUsers = mergeFollowingUsersOffMain(currentUsers, allUsers)
                         if (mergedUsers.size > currentUsers.size) {
-                            currentUsers = mergedUsers.toMutableList()
-                            _uiState.value = FollowingListUiState.Success(
-                                users = currentUsers.toList(),
-                                total = total.coerceAtLeast(currentUsers.size),
-                                hasMore = isFollowingListIncomplete(currentUsers.size, total),
-                                isLoadingMore = true
-                            )
-                            persistFollowingCache(
-                                mid = mid,
-                                total = total.coerceAtLeast(currentUsers.size),
-                                users = currentUsers
-                            )
-                            refreshFollowGroupMetadata(currentUsers)
+                            currentUsers = mergedUsers
+                            publishFollowingUsers(mid, total, currentUsers, isLoadingMore = true)
                         }
                     }.onFailure { error ->
                         com.android.purebilibili.core.util.Logger.w(
@@ -344,6 +339,7 @@ class FollowingListViewModel : ViewModel() {
                         isLoadingMore = false,
                         hasMore = isFollowingListIncomplete(current.users.size, current.total)
                     )
+                    refreshFollowGroupMetadata(current.users)
                 }
             } catch (e: Exception) {
                 // 后台加载失败暂不干扰主流程
@@ -361,6 +357,36 @@ class FollowingListViewModel : ViewModel() {
         val current = _uiState.value as? FollowingListUiState.Success ?: return
         if (current.isLoadingMore || !current.hasMore || currentMid <= 0L) return
         loadAllRemainingPages(currentMid, current.total, current.users)
+    }
+
+    private suspend fun mergeFollowingUsersOffMain(
+        currentUsers: List<FollowingUser>,
+        incomingUsers: List<FollowingUser>
+    ): MutableList<FollowingUser> {
+        val removedMids = removedUserMids.toSet()
+        return withContext(Dispatchers.Default) {
+            mergeFollowingUsersDistinct(
+                currentUsers = currentUsers,
+                incomingUsers = incomingUsers,
+                removedUserMids = removedMids
+            ).toMutableList()
+        }
+    }
+
+    private fun publishFollowingUsers(
+        mid: Long,
+        total: Int,
+        users: List<FollowingUser>,
+        isLoadingMore: Boolean
+    ) {
+        val safeTotal = total.coerceAtLeast(users.size)
+        _uiState.value = FollowingListUiState.Success(
+            users = users.toList(),
+            total = safeTotal,
+            hasMore = isFollowingListIncomplete(users.size, safeTotal),
+            isLoadingMore = isLoadingMore
+        )
+        persistFollowingCache(mid = mid, total = safeTotal, users = users)
     }
 
     suspend fun batchUnfollow(targetUsers: List<FollowingUser>): BatchUnfollowResult {
@@ -762,18 +788,23 @@ fun FollowingListScreen(
                                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                                     // 统计信息
                                     item {
-                                        Text(
-                                            text = when {
+                                        AnimatedBlurFadeText(
+                                            targetText = when {
                                                 isEditMode -> "已选 $selectedCount 人"
                                                 searchQuery.isEmpty() && (selectedGroupFilter == null || selectedGroupFilter == Long.MIN_VALUE) ->
                                                     "共 ${state.total} 个关注"
                                                 searchQuery.isEmpty() -> "当前分组 ${filteredUsers.size} 人"
                                                 else -> "找到 ${filteredUsers.size} 个结果"
                                             },
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                                        )
+                                        ) { text, animatedModifier ->
+                                            Text(
+                                                text = text,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = animatedModifier
+                                            )
+                                        }
                                     }
 
                                     item {
@@ -791,7 +822,9 @@ fun FollowingListScreen(
                                                         (selectedGroupFilter == null && chip.tagid == Long.MIN_VALUE),
                                                     onClick = { selectedGroupFilter = chipFilterId },
                                                     label = {
-                                                        Text("${chip.name} ${chip.count}")
+                                                        AnimatedBlurFadeText(targetText = "${chip.name} ${chip.count}") { text, modifier ->
+                                                            Text(text = text, modifier = modifier)
+                                                        }
                                                     }
                                                 )
                                             }
@@ -814,6 +847,7 @@ fun FollowingListScreen(
                                             user = user,
                                             isEditMode = isEditMode,
                                             isSelected = selectedMids.contains(user.mid),
+                                            modifier = Modifier.animateItem(),
                                             onClick = {
                                                 if (isEditMode) {
                                                     selectedMids = toggleFollowingSelection(selectedMids, user.mid)
@@ -1096,14 +1130,57 @@ fun FollowingListScreen(
 }
 
 @Composable
+private fun AnimatedBlurFadeText(
+    targetText: String,
+    modifier: Modifier = Modifier,
+    content: @Composable (String, Modifier) -> Unit
+) {
+    val blurAnim = remember { Animatable(0f) }
+    val alphaAnim = remember { Animatable(1f) }
+
+    LaunchedEffect(targetText) {
+        blurAnim.snapTo(6f)
+        alphaAnim.snapTo(0.55f)
+        launch {
+            blurAnim.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 220)
+            )
+        }
+        alphaAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 180)
+        )
+    }
+
+    AnimatedContent(
+        targetState = targetText,
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(180)) togetherWith
+                fadeOut(animationSpec = tween(140))) using
+                SizeTransform(clip = false)
+        },
+        label = "following-count-blur-fade"
+    ) { text ->
+        content(
+            text,
+            modifier
+                .alpha(alphaAnim.value)
+                .blur(blurAnim.value.dp)
+        )
+    }
+}
+
+@Composable
 private fun FollowingUserItem(
     user: FollowingUser,
     isEditMode: Boolean,
     isSelected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 12.dp),

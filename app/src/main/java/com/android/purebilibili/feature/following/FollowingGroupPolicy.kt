@@ -52,6 +52,16 @@ internal fun isFollowingListIncomplete(loadedCount: Int, total: Int): Boolean {
     return total > loadedCount
 }
 
+internal fun shouldPublishFollowingLoadBatch(
+    loadedCount: Int,
+    total: Int,
+    pagesSinceLastPublish: Int,
+    publishIntervalPages: Int
+): Boolean {
+    if (loadedCount >= total) return true
+    return pagesSinceLastPublish >= publishIntervalPages
+}
+
 internal fun addFollowGroupMappingIfSuccess(
     target: MutableMap<Long, Set<Long>>,
     userMid: Long,

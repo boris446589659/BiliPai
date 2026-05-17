@@ -93,6 +93,34 @@ class FollowingGroupPolicyTest {
     }
 
     @Test
+    fun `shouldPublishFollowingLoadBatch should batch intermediate page updates`() {
+        assertFalse(
+            shouldPublishFollowingLoadBatch(
+                loadedCount = 150,
+                total = 1100,
+                pagesSinceLastPublish = 1,
+                publishIntervalPages = 3
+            )
+        )
+        assertTrue(
+            shouldPublishFollowingLoadBatch(
+                loadedCount = 200,
+                total = 1100,
+                pagesSinceLastPublish = 3,
+                publishIntervalPages = 3
+            )
+        )
+        assertTrue(
+            shouldPublishFollowingLoadBatch(
+                loadedCount = 1100,
+                total = 1100,
+                pagesSinceLastPublish = 1,
+                publishIntervalPages = 3
+            )
+        )
+    }
+
+    @Test
     fun `addFollowGroupMappingIfSuccess should skip failed lookups`() {
         val target = linkedMapOf<Long, Set<Long>>()
         val failed = Result.failure<Set<Long>>(IllegalStateException("rate limited"))
