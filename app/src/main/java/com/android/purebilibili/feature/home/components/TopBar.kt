@@ -328,6 +328,8 @@ internal fun resolveTopTabSkinStickerIconSize(showText: Boolean): Dp =
 
 internal fun resolveTopTabSkinPartitionIconSize(): Dp = 32.dp
 
+internal fun resolveTopTabSkinStickerIndicatorWidth(): Dp = 28.dp
+
 internal fun resolveTopTabSkinStickerRowHeight(
     baseRowHeight: Dp,
     hasSkinStickerIcons: Boolean,
@@ -755,7 +757,7 @@ private fun LightweightHomeTopTabs(
                         )
                     }
                 }
-                if (effectiveRenderer == HomeTopTabRenderer.MD3) {
+                if (effectiveRenderer == HomeTopTabRenderer.MD3 && !hasSkinStickerIcons) {
                     val indicatorColor = if (skinPlainStyle && skinPlainContentColor != null) {
                         resolveHomeSkinTopTabIndicatorColor(skinPlainContentColor)
                     } else {
@@ -945,6 +947,17 @@ private fun LightweightTopTabItem(
                     color = contentColor
                 )
             }
+            if (hasSkinStickerIcon && showText) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Box(
+                    modifier = Modifier
+                        .width(resolveTopTabSkinStickerIndicatorWidth())
+                        .height(2.dp)
+                        .clip(AppShapes.container(ContainerLevel.Pill))
+                        .background(selectedColor)
+                        .alpha(selectionFraction)
+                )
+            }
         }
 
     }
@@ -983,7 +996,8 @@ fun CategoryTabRow(
         androidNativeVariant = LocalAndroidNativeVariant.current,
         labelMode = labelMode
     )
-    if (!skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX) {
+    val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()
+    if (!hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX) {
         val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
         val scrollChannel = com.android.purebilibili.feature.home.LocalHomeScrollChannel.current
         MiuixCategoryTabRow(

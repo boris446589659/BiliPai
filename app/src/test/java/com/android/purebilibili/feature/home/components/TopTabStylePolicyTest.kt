@@ -594,6 +594,7 @@ class TopTabStylePolicyTest {
         assertEquals(32.dp, resolveTopTabSkinStickerIconSize(showText = true))
         assertEquals(36.dp, resolveTopTabSkinStickerIconSize(showText = false))
         assertEquals(32.dp, resolveTopTabSkinPartitionIconSize())
+        assertEquals(28.dp, resolveTopTabSkinStickerIndicatorWidth())
         assertEquals(
             64.dp,
             resolveTopTabSkinStickerRowHeight(
@@ -697,10 +698,26 @@ class TopTabStylePolicyTest {
         assertTrue(itemSource.contains("resolveTopTabSkinStickerIconSize(showText = showText)"))
         assertTrue(rowCallSource.contains("resolveTopTabSkinPartitionIconSize()"))
         assertTrue(rowCallSource.contains("resolveTopTabSkinStickerRowHeight("))
+        assertTrue(rowCallSource.contains("if (effectiveRenderer == HomeTopTabRenderer.MD3 && !hasSkinStickerIcons)"))
         assertTrue(itemSource.contains("resolveTopTabSkinStickerItemVerticalPadding(showText = showText)"))
+        assertTrue(itemSource.contains("resolveTopTabSkinStickerIndicatorWidth()"))
+        assertTrue(itemSource.contains("alpha(selectionFraction)"))
         assertTrue(itemSource.indexOf("AsyncImage(") < itemSource.indexOf("imageVector = icon"))
         assertTrue(itemSource.contains("else {"))
         assertTrue(itemSource.contains("resolveTopTabCategoryIcon(categoryKey, uiPreset)"))
+    }
+
+    @Test
+    fun `skin top tab stickers keep ios md3 and miuix on shared item indicator path`() {
+        val source = sourceText("src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
+        val categoryTabRowSource = source
+            .substringAfter("fun CategoryTabRow(")
+            .substringBefore("@Composable\nprivate fun MiuixCategoryTabRow(")
+
+        assertTrue(categoryTabRowSource.contains("val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()"))
+        assertTrue(categoryTabRowSource.contains("if (!hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX)"))
+        assertTrue(categoryTabRowSource.contains("topTabSkinIconPaths = topTabSkinIconPaths"))
+        assertTrue(categoryTabRowSource.contains("partitionSkinIconPath = partitionSkinIconPath"))
     }
 
     @Test
