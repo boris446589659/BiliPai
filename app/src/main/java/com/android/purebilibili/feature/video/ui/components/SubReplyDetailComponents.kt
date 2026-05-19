@@ -397,7 +397,7 @@ internal fun SubReplyDetailContent(
     val listScrollResetKey = remember(
         rootReply.rpid,
         effectiveConversationMode,
-        visibleReplies
+        visibleReplies.firstOrNull()?.rpid
     ) {
         resolveSubReplyDetailListScrollResetKey(
             rootReplyId = rootReply.rpid,
@@ -567,18 +567,14 @@ internal fun SubReplyDetailContent(
             itemsIndexed(
                 items = visibleReplies,
                 key = { _, item -> item.rpid }
-            ) { index, item ->
-                SubReplyDetailStaggeredReveal(
-                    revealKey = "reply_${listScrollResetKey}_${item.rpid}",
-                    levelIndex = index + 2
+            ) { _, item ->
+                MaybeDissolvableVideoCard(
+                    isDissolving = item.rpid in dissolvingIds,
+                    onDissolveComplete = { onDeleteComment?.invoke(item.rpid) },
+                    cardId = "subreply_detail_${item.rpid}",
+                    modifier = Modifier.padding(bottom = 1.dp)
                 ) {
-                    MaybeDissolvableVideoCard(
-                        isDissolving = item.rpid in dissolvingIds,
-                        onDissolveComplete = { onDeleteComment?.invoke(item.rpid) },
-                        cardId = "subreply_detail_${item.rpid}",
-                        modifier = Modifier.padding(bottom = 1.dp)
-                    ) {
-                        SubReplyDetailItem(
+                    SubReplyDetailItem(
                             item = item,
                             appearance = appearance,
                             isRootItem = false,
@@ -616,17 +612,11 @@ internal fun SubReplyDetailContent(
                                 null
                             },
                             showTrailingDivider = true
-                        )
-                    }
+                    )
                 }
             }
 
             item(key = "footer") {
-                LaunchedEffect(isLoading, isEnd) {
-                    if (!isLoading && !isEnd) {
-                        onLoadMore()
-                    }
-                }
                 if (isLoading) {
                     Box(
                         modifier = Modifier

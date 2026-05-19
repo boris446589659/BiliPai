@@ -53,6 +53,14 @@ class SubReplyDetailPresentationPolicyTest {
     }
 
     @Test
+    fun `sub reply detail list avoids per reply reveal wrappers and eager footer loading`() {
+        val source = File("src/main/java/com/android/purebilibili/feature/video/ui/components/SubReplyDetailComponents.kt").readText()
+
+        assertFalse(source.contains("revealKey = \"reply_"))
+        assertFalse(source.contains("LaunchedEffect(isLoading, isEnd)"))
+    }
+
+    @Test
     fun `sub reply detail display count keeps root declared total when page only loaded partially`() {
         assertEquals(
             8,
