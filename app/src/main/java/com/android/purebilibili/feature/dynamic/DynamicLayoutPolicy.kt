@@ -71,7 +71,10 @@ internal fun resolveDynamicActionButtonText(
 ): String? {
     val countText = if (count > 0) formatDynamicActionCount(count) else null
     return when (label) {
-        "转发", "评论" -> {
+        "评论" -> {
+            listOfNotNull(label, countText).joinToString(separator = " ")
+        }
+        "转发" -> {
             if (slotWidthDp != null && slotWidthDp in 1 until 120) {
                 label
             } else {
