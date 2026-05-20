@@ -448,17 +448,28 @@ internal data class VideoDetailEntryVisualFrame(
 internal data class VideoDetailRouteSheetMotion(
     val enabled: Boolean,
     val durationMillis: Int,
+    val mainDurationMillis: Int,
+    val settleDurationMillis: Int,
     val initialScale: Float,
     val initialTranslationYDp: Float,
     val initialCornerDp: Float,
-    val initialBackgroundScrimAlpha: Float
+    val initialBackgroundScrimAlpha: Float,
+    val settleScaleDelta: Float,
+    val settleTranslationDp: Float
 )
+
+internal enum class VideoDetailRouteSheetSettleDirection {
+    None,
+    Enter,
+    Return
+}
 
 internal data class VideoDetailRouteSheetFrame(
     val scale: Float,
     val translationYDp: Float,
     val cornerDp: Float,
-    val backgroundScrimAlpha: Float
+    val backgroundScrimAlpha: Float,
+    val settleProgress: Float
 )
 
 internal data class VideoDetailMotionSpec(
@@ -469,11 +480,16 @@ internal data class VideoDetailMotionSpec(
 
 private const val VIDEO_DETAIL_ENTRY_PHASE_MIN_DURATION_MILLIS = 120
 private const val VIDEO_DETAIL_CONTENT_PHASE_MIN_DURATION_MILLIS = 180
-private const val HOME_VIDEO_ROUTE_SHEET_DURATION_MILLIS = 360
+private const val HOME_VIDEO_ROUTE_SHEET_MAIN_DURATION_MILLIS = 320
+private const val HOME_VIDEO_ROUTE_SHEET_SETTLE_DURATION_MILLIS = 96
+private const val HOME_VIDEO_ROUTE_SHEET_DURATION_MILLIS =
+    HOME_VIDEO_ROUTE_SHEET_MAIN_DURATION_MILLIS + HOME_VIDEO_ROUTE_SHEET_SETTLE_DURATION_MILLIS
 private const val HOME_VIDEO_ROUTE_SHEET_INITIAL_SCALE = 0.965f
 private const val HOME_VIDEO_ROUTE_SHEET_INITIAL_TRANSLATION_Y_DP = 56f
 private const val HOME_VIDEO_ROUTE_SHEET_INITIAL_CORNER_DP = 28f
 private const val HOME_VIDEO_ROUTE_SHEET_INITIAL_SCRIM_ALPHA = 0.18f
+private const val HOME_VIDEO_ROUTE_SHEET_SETTLE_SCALE_DELTA = 0.0015f
+private const val HOME_VIDEO_ROUTE_SHEET_SETTLE_TRANSLATION_DP = 1.5f
 
 internal fun resolveVideoDetailMotionSpec(
     transitionEnterDurationMillis: Int
@@ -497,15 +513,21 @@ internal fun resolveVideoDetailRouteSheetMotion(
     return VideoDetailRouteSheetMotion(
         enabled = enabled,
         durationMillis = HOME_VIDEO_ROUTE_SHEET_DURATION_MILLIS,
+        mainDurationMillis = HOME_VIDEO_ROUTE_SHEET_MAIN_DURATION_MILLIS,
+        settleDurationMillis = HOME_VIDEO_ROUTE_SHEET_SETTLE_DURATION_MILLIS,
         initialScale = HOME_VIDEO_ROUTE_SHEET_INITIAL_SCALE,
         initialTranslationYDp = HOME_VIDEO_ROUTE_SHEET_INITIAL_TRANSLATION_Y_DP,
         initialCornerDp = HOME_VIDEO_ROUTE_SHEET_INITIAL_CORNER_DP,
-        initialBackgroundScrimAlpha = HOME_VIDEO_ROUTE_SHEET_INITIAL_SCRIM_ALPHA
+        initialBackgroundScrimAlpha = HOME_VIDEO_ROUTE_SHEET_INITIAL_SCRIM_ALPHA,
+        settleScaleDelta = HOME_VIDEO_ROUTE_SHEET_SETTLE_SCALE_DELTA,
+        settleTranslationDp = HOME_VIDEO_ROUTE_SHEET_SETTLE_TRANSLATION_DP
     )
 }
 
 internal fun resolveVideoDetailRouteSheetFrame(
     rawProgress: Float,
+    settleProgress: Float = 0f,
+    settleDirection: VideoDetailRouteSheetSettleDirection = VideoDetailRouteSheetSettleDirection.None,
     motion: VideoDetailRouteSheetMotion
 ): VideoDetailRouteSheetFrame {
     if (!motion.enabled) {
@@ -513,20 +535,102 @@ internal fun resolveVideoDetailRouteSheetFrame(
             scale = 1f,
             translationYDp = 0f,
             cornerDp = 0f,
-            backgroundScrimAlpha = 0f
+            backgroundScrimAlpha = 0f,
+            settleProgress = 0f
         )
     }
     val progress = rawProgress.coerceIn(0f, 1f)
+    val safeSettleProgress = settleProgress.coerceIn(0f, 1f)
+    val settleScale = when (settleDirection) {
+        VideoDetailRouteSheetSettleDirection.Enter -> motion.settleScaleDelta * safeSettleProgress
+        VideoDetailRouteSheetSettleDirection.Return -> -motion.settleScaleDelta * safeSettleProgress
+        VideoDetailRouteSheetSettleDirection.None -> 0f
+    }
+    val settleTranslation = when (settleDirection) {
+        VideoDetailRouteSheetSettleDirection.Enter -> -motion.settleTranslationDp * safeSettleProgress
+        VideoDetailRouteSheetSettleDirection.Return -> motion.settleTranslationDp * safeSettleProgress
+        VideoDetailRouteSheetSettleDirection.None -> 0f
+    }
     return VideoDetailRouteSheetFrame(
-        scale = lerpVideoDetailFloat(motion.initialScale, 1f, progress),
-        translationYDp = lerpVideoDetailFloat(motion.initialTranslationYDp, 0f, progress),
+        scale = lerpVideoDetailFloat(motion.initialScale, 1f, progress) + settleScale,
+        translationYDp = lerpVideoDetailFloat(motion.initialTranslationYDp, 0f, progress) + settleTranslation,
         cornerDp = lerpVideoDetailFloat(motion.initialCornerDp, 0f, progress),
-        backgroundScrimAlpha = lerpVideoDetailFloat(motion.initialBackgroundScrimAlpha, 0f, progress)
+        backgroundScrimAlpha = lerpVideoDetailFloat(motion.initialBackgroundScrimAlpha, 0f, progress),
+        settleProgress = safeSettleProgress
     )
 }
 
 private fun lerpVideoDetailFloat(start: Float, stop: Float, fraction: Float): Float {
     return start + (stop - start) * fraction
+}
+
+@Composable
+private fun rememberVideoDetailRouteSheetFrame(
+    motion: VideoDetailRouteSheetMotion,
+    isExitTransitionInProgress: Boolean
+): VideoDetailRouteSheetFrame {
+    val routeSheetProgress = remember(motion.enabled) {
+        Animatable(if (motion.enabled) 0f else 1f)
+    }
+    val routeSheetSettleProgress = remember(motion.enabled) {
+        Animatable(0f)
+    }
+    var settleDirection by remember {
+        mutableStateOf(VideoDetailRouteSheetSettleDirection.None)
+    }
+
+    LaunchedEffect(
+        motion.enabled,
+        motion.mainDurationMillis,
+        motion.settleDurationMillis,
+        isExitTransitionInProgress
+    ) {
+        if (!motion.enabled) {
+            settleDirection = VideoDetailRouteSheetSettleDirection.None
+            routeSheetSettleProgress.snapTo(0f)
+            routeSheetProgress.snapTo(1f)
+            return@LaunchedEffect
+        }
+
+        settleDirection = VideoDetailRouteSheetSettleDirection.None
+        routeSheetSettleProgress.snapTo(0f)
+        val targetProgress = if (isExitTransitionInProgress) 0f else 1f
+        routeSheetProgress.animateTo(
+            targetValue = targetProgress,
+            animationSpec = tween(
+                durationMillis = motion.mainDurationMillis,
+                easing = FastOutSlowInEasing
+            )
+        )
+        settleDirection = if (isExitTransitionInProgress) {
+            VideoDetailRouteSheetSettleDirection.Return
+        } else {
+            VideoDetailRouteSheetSettleDirection.Enter
+        }
+        routeSheetSettleProgress.snapTo(1f)
+        routeSheetSettleProgress.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(
+                durationMillis = motion.settleDurationMillis,
+                easing = FastOutSlowInEasing
+            )
+        )
+        settleDirection = VideoDetailRouteSheetSettleDirection.None
+    }
+
+    return remember(
+        routeSheetProgress.value,
+        routeSheetSettleProgress.value,
+        settleDirection,
+        motion
+    ) {
+        resolveVideoDetailRouteSheetFrame(
+            rawProgress = routeSheetProgress.value,
+            settleProgress = routeSheetSettleProgress.value,
+            settleDirection = settleDirection,
+            motion = motion
+        )
+    }
 }
 
 @Composable
@@ -1323,33 +1427,10 @@ fun VideoDetailScreen(
     val rootAnimatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isExitTransitionInProgress =
         rootAnimatedVisibilityScope?.transition?.targetState == EnterExitState.PostExit
-    val routeSheetProgress = remember(routeSheetMotion.enabled) {
-        Animatable(if (routeSheetMotion.enabled) 0f else 1f)
-    }
-    LaunchedEffect(
-        routeSheetMotion.enabled,
-        routeSheetMotion.durationMillis,
-        isExitTransitionInProgress
-    ) {
-        if (!routeSheetMotion.enabled) {
-            routeSheetProgress.snapTo(1f)
-            return@LaunchedEffect
-        }
-        val targetProgress = if (isExitTransitionInProgress) 0f else 1f
-        routeSheetProgress.animateTo(
-            targetValue = targetProgress,
-            animationSpec = tween(
-                durationMillis = routeSheetMotion.durationMillis,
-                easing = FastOutSlowInEasing
-            )
-        )
-    }
-    val routeSheetFrame = remember(routeSheetProgress.value, routeSheetMotion) {
-        resolveVideoDetailRouteSheetFrame(
-            rawProgress = routeSheetProgress.value,
-            motion = routeSheetMotion
-        )
-    }
+    val routeSheetFrame = rememberVideoDetailRouteSheetFrame(
+        motion = routeSheetMotion,
+        isExitTransitionInProgress = isExitTransitionInProgress
+    )
     val coverTakeoverBeforeBackDelayMillis = remember {
         resolveCoverTakeoverDelayBeforeBackNavigationMillis()
     }

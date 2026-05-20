@@ -1,5 +1,7 @@
 package com.android.purebilibili.core.ui.transition
 
+import com.android.purebilibili.core.ui.motion.resolveDetailVerticalContentRevealMotionSpec
+
 internal enum class VideoSharedTransitionProfile {
     COVER_ONLY,
     COVER_AND_METADATA
@@ -171,11 +173,18 @@ internal fun resolveVideoDetailContentRevealMotion(
         )
     }
 
-    return VideoDetailContentRevealMotion(
-        enabled = true,
+    val revealMotion = resolveDetailVerticalContentRevealMotionSpec(
         delayMillis = homeMotionSpec.contentDelayMillis,
         durationMillis = homeMotionSpec.contentDurationMillis,
-        slideOffsetDp = homeMotionSpec.contentSlideOffsetDp,
+        slideOffsetDp = homeMotionSpec.contentSlideOffsetDp.toFloat(),
         initialScale = homeMotionSpec.contentInitialScale
+    )
+
+    return VideoDetailContentRevealMotion(
+        enabled = true,
+        delayMillis = revealMotion.delayMillis,
+        durationMillis = revealMotion.durationMillis,
+        slideOffsetDp = revealMotion.slideOffsetDp.toInt(),
+        initialScale = revealMotion.initialScale
     )
 }

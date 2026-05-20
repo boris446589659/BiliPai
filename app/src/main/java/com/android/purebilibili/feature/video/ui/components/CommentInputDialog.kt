@@ -52,6 +52,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import com.android.purebilibili.core.ui.motion.resolveCommentVerticalContentRevealMotionSpec
+import com.android.purebilibili.core.ui.motion.verticalContentRevealEnterTransition
+import com.android.purebilibili.core.ui.motion.verticalContentRevealExitTransition
 import com.android.purebilibili.core.util.FormatUtils
 import kotlinx.coroutines.delay
 
@@ -517,10 +520,13 @@ fun CommentInputDialog(
                         }
                         
                         // 3. 表情面板區域
+                        val emojiPanelRevealMotion = remember {
+                            resolveCommentVerticalContentRevealMotionSpec()
+                        }
                         AnimatedVisibility(
                             visible = showEmojiPanel,
-                            enter = androidx.compose.animation.expandVertically() + fadeIn(),
-                            exit = androidx.compose.animation.shrinkVertically() + fadeOut()
+                            enter = verticalContentRevealEnterTransition(emojiPanelRevealMotion),
+                            exit = verticalContentRevealExitTransition(emojiPanelRevealMotion)
                         ) {
                             Column(
                                 modifier = Modifier
