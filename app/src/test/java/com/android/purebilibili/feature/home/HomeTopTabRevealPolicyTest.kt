@@ -89,6 +89,18 @@ class HomeTopTabRevealPolicyTest {
     }
 
     @Test
+    fun idleHome_keepsCollapsedTopTabsHostVisibleForScrollRecovery() {
+        assertTrue(
+            resolveHomeTopTabsVisible(
+                isDelayedForCardSettle = false,
+                isForwardNavigatingToDetail = false,
+                isReturningFromDetail = false,
+                topTabsCollapsed = true
+            )
+        )
+    }
+
+    @Test
     fun returningFromDetail_keepsVisibleTopTabsVisibleEvenIfFlagsWereHidden() {
         assertTrue(
             resolveHomeTopTabsVisible(
