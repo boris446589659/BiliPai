@@ -6,10 +6,21 @@ internal data class BiliPaiReturnSessionState(
     val isReturningFromDetail: Boolean = false,
     val isQuickReturnFromDetail: Boolean = false,
     val lastVideoSourceRoute: String? = null,
+    val lastVideoSourceKey: String? = null,
     val detailEnteredAtMillis: Long? = null
 ) {
+    fun recordVideoSource(source: BiliPaiVideoSource): BiliPaiReturnSessionState {
+        return copy(
+            lastVideoSourceRoute = source.route,
+            lastVideoSourceKey = source.key
+        )
+    }
+
     fun recordVideoSourceRoute(sourceRoute: String?): BiliPaiReturnSessionState {
-        return copy(lastVideoSourceRoute = sourceRoute)
+        return copy(
+            lastVideoSourceRoute = normalizeBiliPaiVideoSourceRoute(sourceRoute),
+            lastVideoSourceKey = null
+        )
     }
 
     fun markDetailEntered(nowMillis: Long): BiliPaiReturnSessionState {

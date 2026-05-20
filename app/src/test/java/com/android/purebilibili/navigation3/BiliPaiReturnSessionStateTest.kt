@@ -10,9 +10,15 @@ class BiliPaiReturnSessionStateTest {
     @Test
     fun videoSourceRouteIsStoredOutsideCardPositionManager() {
         val state = BiliPaiReturnSessionState()
-            .recordVideoSourceRoute("search")
+            .recordVideoSource(
+                BiliPaiVideoSource(
+                    route = "search",
+                    key = "search:BV1"
+                )
+            )
 
         assertEquals("search", state.lastVideoSourceRoute)
+        assertEquals("search:BV1", state.lastVideoSourceKey)
         assertFalse(state.isReturningFromDetail)
         assertFalse(state.isQuickReturnFromDetail)
     }
@@ -30,13 +36,34 @@ class BiliPaiReturnSessionStateTest {
     @Test
     fun clearReturningKeepsSourceRouteForNextSharedElementMatch() {
         val state = BiliPaiReturnSessionState()
-            .recordVideoSourceRoute("home")
+            .recordVideoSource(
+                BiliPaiVideoSource(
+                    route = "home",
+                    key = "home:BV1"
+                )
+            )
             .markDetailEntered(nowMillis = 1_000L)
             .markReturning(nowMillis = 2_000L)
             .clearReturning()
 
         assertEquals("home", state.lastVideoSourceRoute)
+        assertEquals("home:BV1", state.lastVideoSourceKey)
         assertFalse(state.isReturningFromDetail)
         assertFalse(state.isQuickReturnFromDetail)
+    }
+
+    @Test
+    fun legacyRouteRecordingClearsPreviousSourceKey() {
+        val state = BiliPaiReturnSessionState()
+            .recordVideoSource(
+                BiliPaiVideoSource(
+                    route = "search",
+                    key = "search:BV1"
+                )
+            )
+            .recordVideoSourceRoute("history?from=tab")
+
+        assertEquals("history", state.lastVideoSourceRoute)
+        assertEquals(null, state.lastVideoSourceKey)
     }
 }

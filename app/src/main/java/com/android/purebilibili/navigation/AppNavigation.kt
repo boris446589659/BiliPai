@@ -134,6 +134,7 @@ import com.android.purebilibili.navigation3.resolveBiliPaiNavMotionDecision
 import com.android.purebilibili.navigation3.resolveBiliPaiNavMotionMode
 import com.android.purebilibili.navigation3.resolveBiliPaiNavEntryContentRole
 import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
+import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.shouldInterceptSystemBackForNavigation3
 import com.android.purebilibili.navigation3.toLegacyRoute
@@ -832,6 +833,7 @@ fun AppNavigation(
             )
         }
         fun currentNavigation3SourceMetadata() = resolveBiliPaiNavSourceMetadata(
+            sourceKey = navigation3ReturnSession.lastVideoSourceKey,
             sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
             clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
             cardFullyVisible = CardPositionManager.isCardFullyVisible
@@ -849,16 +851,23 @@ fun AppNavigation(
         }
         fun navigateToVideoRouteInNavigation3(route: String, sourceRoute: String?) {
             if (!canNavigate(false)) return
-            val source = sourceRoute ?: navigation3BackStack.lastOrNull()?.toLegacyRoute()
+            val parsedKey = legacyRouteToBiliPaiNavKey(route)
+            val videoBvid = (parsedKey as? BiliPaiNavKey.VideoDetail)?.bvid.orEmpty()
+            val source = resolveBiliPaiVideoSource(
+                bvid = videoBvid,
+                explicitSourceRoute = sourceRoute,
+                currentKey = navigation3BackStack.lastOrNull(),
+                previousSourceRoute = navigation3ReturnSession.lastVideoSourceRoute
+            )
             navigation3ReturnSession = navigation3ReturnSession
-                .recordVideoSourceRoute(source)
+                .recordVideoSource(source)
                 .markDetailEntered(SystemClock.uptimeMillis())
-            CardPositionManager.recordVideoSourceRoute(source)
+            CardPositionManager.recordVideoSourceRoute(source.route)
             miniPlayerManager?.isNavigatingToVideo = true
             miniPlayerManager?.exitMiniMode(animate = false)
-            val key = when (val parsed = legacyRouteToBiliPaiNavKey(route)) {
-                is BiliPaiNavKey.VideoDetail -> parsed.copy(sourceRoute = source)
-                else -> parsed
+            val key = when (parsedKey) {
+                is BiliPaiNavKey.VideoDetail -> parsedKey.copy(sourceRoute = source.route)
+                else -> parsedKey
             }
             pushNavigation3Key(key)
         }
