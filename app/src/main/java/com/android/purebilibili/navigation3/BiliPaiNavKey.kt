@@ -110,6 +110,30 @@ internal sealed interface BiliPaiNavKey : NavKey {
     }
 
     @Serializable
+    data object Onboarding : BiliPaiNavKey {
+        override val routeBase: String = "onboarding"
+    }
+
+    @Serializable
+    data class Following(
+        val mid: Long
+    ) : BiliPaiNavKey {
+        override val routeBase: String = "following"
+    }
+
+    @Serializable
+    data object DownloadList : BiliPaiNavKey {
+        override val routeBase: String = "download_list"
+    }
+
+    @Serializable
+    data class OfflineVideoPlayer(
+        val taskId: String
+    ) : BiliPaiNavKey {
+        override val routeBase: String = "offline_video"
+    }
+
+    @Serializable
     data object LiveList : BiliPaiNavKey {
         override val routeBase: String = "live_list"
     }

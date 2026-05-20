@@ -1599,6 +1599,13 @@ fun AppNavigation(
                                 }
                             )
                         }
+                        BiliPaiNavEntryContentRole.ONBOARDING ->
+                            com.android.purebilibili.feature.onboarding.OnboardingScreen(
+                                onFinish = {
+                                    welcomePrefs.edit().putBoolean("first_launch_shown", true).apply()
+                                    navigation3BackStack = listOf(BiliPaiNavKey.Home)
+                                }
+                            )
                         BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(
                                 onBack = { performSystemBackAction() },
                                 onOpenSourceLicensesClick = { pushNavigation3Key(BiliPaiNavKey.OpenSourceLicenses) },
@@ -1679,6 +1686,29 @@ fun AppNavigation(
                                 },
                                 globalHazeState = mainHazeState
                             )
+                        BiliPaiNavEntryContentRole.FOLLOWING -> {
+                                val followingKey = key as BiliPaiNavKey.Following
+                                com.android.purebilibili.feature.following.FollowingListScreen(
+                                    mid = followingKey.mid,
+                                    onBack = { performSystemBackAction() },
+                                    onUserClick = { userMid -> pushNavigation3Key(BiliPaiNavKey.Space(userMid)) }
+                                )
+                            }
+                        BiliPaiNavEntryContentRole.DOWNLOAD_LIST ->
+                            com.android.purebilibili.feature.download.DownloadListScreen(
+                                onBack = { performSystemBackAction() },
+                                onVideoClick = { bvid -> navigateToVideoInNavigation3(bvid, 0L, "") },
+                                onOfflineVideoClick = { taskId ->
+                                    pushNavigation3Key(BiliPaiNavKey.OfflineVideoPlayer(taskId))
+                                }
+                            )
+                        BiliPaiNavEntryContentRole.OFFLINE_VIDEO_PLAYER -> {
+                                val offlineVideoKey = key as BiliPaiNavKey.OfflineVideoPlayer
+                                com.android.purebilibili.feature.download.OfflineVideoPlayerScreen(
+                                    taskId = offlineVideoKey.taskId,
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.LIVE_LIST ->
                             com.android.purebilibili.feature.live.LiveListScreen(
                                 onBack = { performSystemBackAction() },

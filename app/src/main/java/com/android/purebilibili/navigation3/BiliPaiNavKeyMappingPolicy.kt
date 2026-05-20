@@ -27,6 +27,10 @@ internal fun BiliPaiNavKey.toLegacyRoute(): String {
         BiliPaiNavKey.History -> ScreenRoutes.History.route
         BiliPaiNavKey.Favorite -> ScreenRoutes.Favorite.route
         BiliPaiNavKey.WatchLater -> ScreenRoutes.WatchLater.route
+        BiliPaiNavKey.Onboarding -> ScreenRoutes.Onboarding.route
+        is BiliPaiNavKey.Following -> ScreenRoutes.Following.createRoute(mid)
+        BiliPaiNavKey.DownloadList -> ScreenRoutes.DownloadList.route
+        is BiliPaiNavKey.OfflineVideoPlayer -> ScreenRoutes.OfflineVideoPlayer.createRoute(taskId)
         BiliPaiNavKey.LiveList -> ScreenRoutes.LiveList.route
         BiliPaiNavKey.LiveSearch -> ScreenRoutes.LiveSearch.route
         BiliPaiNavKey.LiveArea -> ScreenRoutes.LiveArea.route
@@ -89,6 +93,14 @@ internal fun legacyRouteToBiliPaiNavKey(route: String?): BiliPaiNavKey {
         normalized == ScreenRoutes.History.route -> BiliPaiNavKey.History
         normalized == ScreenRoutes.Favorite.route -> BiliPaiNavKey.Favorite
         normalized == ScreenRoutes.WatchLater.route -> BiliPaiNavKey.WatchLater
+        normalized == ScreenRoutes.Onboarding.route -> BiliPaiNavKey.Onboarding
+        segments.firstOrNull() == "following" && segments.size >= 2 -> {
+            BiliPaiNavKey.Following(mid = segments[1].toLongOrNull() ?: 0L)
+        }
+        normalized == ScreenRoutes.DownloadList.route -> BiliPaiNavKey.DownloadList
+        segments.firstOrNull() == "offline_video" && segments.size >= 2 -> {
+            BiliPaiNavKey.OfflineVideoPlayer(taskId = decodeRouteValue(segments[1]))
+        }
         normalized == ScreenRoutes.LiveList.route -> BiliPaiNavKey.LiveList
         normalized == ScreenRoutes.LiveSearch.route -> BiliPaiNavKey.LiveSearch
         normalized == ScreenRoutes.LiveArea.route -> BiliPaiNavKey.LiveArea

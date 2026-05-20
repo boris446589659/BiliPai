@@ -87,6 +87,17 @@ class BiliPaiNavKeyMappingPolicyTest {
     }
 
     @Test
+    fun standaloneUtilityRoutes_mapToNavigation3Keys() {
+        assertEquals(BiliPaiNavKey.Onboarding, legacyRouteToBiliPaiNavKey(ScreenRoutes.Onboarding.route))
+        assertEquals(BiliPaiNavKey.Following(42L), legacyRouteToBiliPaiNavKey(ScreenRoutes.Following.createRoute(42L)))
+        assertEquals(BiliPaiNavKey.DownloadList, legacyRouteToBiliPaiNavKey(ScreenRoutes.DownloadList.route))
+        assertEquals(
+            BiliPaiNavKey.OfflineVideoPlayer("task-1"),
+            legacyRouteToBiliPaiNavKey("offline_video/task-1")
+        )
+    }
+
+    @Test
     fun cardReturnTargets_matchExistingSharedElementDestinations() {
         assertEquals(true, isCardReturnTargetNavKey(BiliPaiNavKey.Home))
         assertEquals(true, isCardReturnTargetNavKey(BiliPaiNavKey.Search))
