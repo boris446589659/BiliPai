@@ -46,8 +46,13 @@ internal fun resolveBiliPaiNavMotionDecision(
     val isVideoToCardReturn = fromKey is BiliPaiNavKey.VideoDetail &&
         toKey != null &&
         isCardReturnTargetNavKey(toKey)
+    val isCardToVideoForward = fromKey != null &&
+        isCardReturnTargetNavKey(fromKey) &&
+        toKey is BiliPaiNavKey.VideoDetail
     val routeTransition = when {
-        cardTransitionEnabled && sharedTransitionReady && isVideoToCardReturn ->
+        cardTransitionEnabled &&
+            sharedTransitionReady &&
+            (isVideoToCardReturn || isCardToVideoForward) ->
             BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
         mode == BiliPaiNavMotionMode.PREDICTIVE_STABLE ->
             BiliPaiNavRouteTransition.PREDICTIVE_PROGRESS

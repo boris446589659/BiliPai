@@ -44,6 +44,20 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
+    fun sharedElementReady_homeVideoForward_prefersNoOpRouteLayer() {
+        val decision = resolveBiliPaiNavMotionDecision(
+            fromKey = BiliPaiNavKey.Home,
+            toKey = BiliPaiNavKey.VideoDetail("BV1", sourceRoute = "home"),
+            predictiveBackAnimationEnabled = false,
+            cardTransitionEnabled = true,
+            sharedTransitionReady = true
+        )
+
+        assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, decision.routeTransition)
+        assertTrue(decision.interceptSystemBack)
+    }
+
+    @Test
     fun classicCardMode_interceptsSystemBackSoNavDisplayDoesNotOwnPrediction() {
         val decision = resolveBiliPaiNavMotionDecision(
             fromKey = BiliPaiNavKey.VideoDetail("BV1"),

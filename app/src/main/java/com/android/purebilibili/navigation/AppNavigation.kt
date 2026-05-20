@@ -1688,7 +1688,18 @@ fun AppNavigation(
                 val fromRoute = initialState.destination.route
                 val targetRoute = targetState.destination.route
                 val sharedTransitionReady = currentNavigation3SourceMetadata().sharedTransitionReady
-                when (
+                val navigation3MotionDecision = resolveBiliPaiNavMotionDecision(
+                    fromKey = legacyRouteToBiliPaiNavKey(fromRoute),
+                    toKey = legacyRouteToBiliPaiNavKey(targetRoute),
+                    predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
+                    cardTransitionEnabled = cardTransitionEnabled,
+                    sharedTransitionReady = sharedTransitionReady
+                )
+                val action = if (
+                    navigation3MotionDecision.routeTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
+                ) {
+                    VideoPushEnterAction.NO_OP
+                } else {
                     resolveVideoPushEnterAction(
                         cardTransitionEnabled = cardTransitionEnabled,
                         predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
@@ -1697,7 +1708,8 @@ fun AppNavigation(
                         sharedTransitionReady = sharedTransitionReady,
                         lastClickedCardCenterX = CardPositionManager.lastClickedCardCenter?.x
                     )
-                ) {
+                }
+                when (action) {
                     VideoPushEnterAction.NO_OP -> EnterTransition.None
                     VideoPushEnterAction.HERO_EXPAND_FADE -> {
                         val cardCenter = CardPositionManager.lastClickedCardCenter
