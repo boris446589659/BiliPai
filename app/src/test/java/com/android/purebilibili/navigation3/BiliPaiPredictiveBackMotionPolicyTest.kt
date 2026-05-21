@@ -69,4 +69,14 @@ class BiliPaiPredictiveBackMotionPolicyTest {
     fun cornerRadiusUsesDeviceRadiusWhenAvailable() {
         assertEquals(36.dp, resolveBiliPaiPredictiveBackCornerRadius(deviceCornerRadius = 36.dp))
     }
+
+    @Test
+    fun classicStyleUsesLayeredPopMotionWithoutFadeOrScale() {
+        val motion = resolveBiliPaiClassicLayeredPopMotion()
+
+        assertEquals(-0.25f, motion.targetEnterInitialOffsetFraction)
+        assertEquals(1f, motion.initialExitTargetOffsetFraction)
+        assertEquals(false, motion.fadeExitingPage)
+        assertEquals(false, motion.scaleExitingPage)
+    }
 }

@@ -21,6 +21,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -478,9 +479,34 @@ private fun noRouteLayerPredictiveTransform(): ContentTransform {
 }
 
 private fun AnimatedContentTransitionScope<Scene<BiliPaiNavKey>>.classicPopTransform(): ContentTransform {
+    val motion = resolveBiliPaiClassicLayeredPopMotion()
     return ContentTransform(
-        targetContentEnter = slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }),
-        initialContentExit = scaleOut(targetScale = 0.9f) + fadeOut(),
+        targetContentEnter = slideInHorizontally(
+            initialOffsetX = { fullWidth ->
+                (fullWidth * motion.targetEnterInitialOffsetFraction).toInt()
+            }
+        ),
+        initialContentExit = slideOutHorizontally(
+            targetOffsetX = { fullWidth ->
+                (fullWidth * motion.initialExitTargetOffsetFraction).toInt()
+            }
+        ),
         sizeTransform = null
+    )
+}
+
+internal data class BiliPaiClassicLayeredPopMotion(
+    val targetEnterInitialOffsetFraction: Float,
+    val initialExitTargetOffsetFraction: Float,
+    val fadeExitingPage: Boolean,
+    val scaleExitingPage: Boolean
+)
+
+internal fun resolveBiliPaiClassicLayeredPopMotion(): BiliPaiClassicLayeredPopMotion {
+    return BiliPaiClassicLayeredPopMotion(
+        targetEnterInitialOffsetFraction = -0.25f,
+        initialExitTargetOffsetFraction = 1f,
+        fadeExitingPage = false,
+        scaleExitingPage = false
     )
 }
