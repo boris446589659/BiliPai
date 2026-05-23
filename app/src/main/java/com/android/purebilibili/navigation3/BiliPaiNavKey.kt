@@ -224,7 +224,11 @@ internal sealed interface BiliPaiNavKey : NavKey {
     }
 
     @Serializable
-    data object AudioMode : BiliPaiNavKey {
+    data class AudioMode(
+        val sourceBvid: String = "",
+        val sourceCid: Long = 0L,
+        val sourceResumePositionMs: Long = 0L
+    ) : BiliPaiNavKey {
         override val routeBase: String = "audio_mode"
     }
 

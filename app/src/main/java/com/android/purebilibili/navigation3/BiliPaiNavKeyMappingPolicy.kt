@@ -47,7 +47,7 @@ internal fun BiliPaiNavKey.toLegacyRoute(): String {
         is BiliPaiNavKey.Chat -> ScreenRoutes.Chat.createRoute(talkerId, sessionType, userName)
         BiliPaiNavKey.Partition -> ScreenRoutes.Partition.route
         BiliPaiNavKey.Story -> ScreenRoutes.Story.route
-        BiliPaiNavKey.AudioMode -> ScreenRoutes.AudioMode.route
+        is BiliPaiNavKey.AudioMode -> ScreenRoutes.AudioMode.route
         is BiliPaiNavKey.SeasonSeriesDetail -> ScreenRoutes.SeasonSeriesDetail.createRoute(
             type = type,
             id = id,
@@ -145,7 +145,7 @@ internal fun legacyRouteToBiliPaiNavKey(route: String?): BiliPaiNavKey {
         }
         normalized == ScreenRoutes.Partition.route -> BiliPaiNavKey.Partition
         normalized == ScreenRoutes.Story.route -> BiliPaiNavKey.Story
-        normalized == ScreenRoutes.AudioMode.route -> BiliPaiNavKey.AudioMode
+        normalized == ScreenRoutes.AudioMode.route -> BiliPaiNavKey.AudioMode()
         segments.firstOrNull() == "season_series_detail" && segments.size >= 3 -> {
             BiliPaiNavKey.SeasonSeriesDetail(
                 type = decodeRouteValue(segments[1]),

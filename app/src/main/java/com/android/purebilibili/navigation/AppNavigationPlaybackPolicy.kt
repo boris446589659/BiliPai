@@ -1,6 +1,7 @@
 package com.android.purebilibili.navigation
 
 import androidx.lifecycle.Lifecycle
+import com.android.purebilibili.navigation3.BiliPaiNavKey
 
 internal fun shouldStopPlaybackEagerlyOnVideoRouteExit(
     fromRoute: String?,
@@ -69,4 +70,24 @@ internal fun shouldNavigateAudioModeBackToCurrentVideo(
     val normalizedCurrentBvid = currentVideoBvid.trim()
     if (normalizedCurrentBvid.isEmpty()) return false
     return previousVideoBvid?.trim() != normalizedCurrentBvid
+}
+
+internal data class AudioModeInitialLoadRequest(
+    val bvid: String,
+    val cid: Long,
+    val resumePositionMs: Long
+)
+
+internal fun resolveAudioModeInitialLoadRequest(
+    key: BiliPaiNavKey.AudioMode,
+    hasDisplayState: Boolean
+): AudioModeInitialLoadRequest? {
+    if (hasDisplayState) return null
+    val sourceBvid = key.sourceBvid.trim()
+    if (sourceBvid.isEmpty()) return null
+    return AudioModeInitialLoadRequest(
+        bvid = sourceBvid,
+        cid = key.sourceCid.coerceAtLeast(0L),
+        resumePositionMs = key.sourceResumePositionMs.coerceAtLeast(0L)
+    )
 }

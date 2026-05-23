@@ -184,7 +184,10 @@ fun AudioModeScreen(
     viewModel: PlayerViewModel,
     onBack: () -> Unit,
     onVideoModeClick: (String, Long) -> Unit,  //  传递当前视频的 bvid/cid
-    isInPipMode: Boolean = false
+    isInPipMode: Boolean = false,
+    initialBvid: String = "",
+    initialCid: Long = 0L,
+    initialResumePositionMs: Long = 0L
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sleepTimerMinutes by viewModel.sleepTimerMinutes.collectAsStateWithLifecycle()
@@ -228,6 +231,17 @@ fun AudioModeScreen(
         uiState is PlayerUiState.Success -> uiState as PlayerUiState.Success
         cachedSuccessState != null -> cachedSuccessState!!
         else -> null
+    }
+
+    LaunchedEffect(initialBvid, initialCid, initialResumePositionMs) {
+        if (displayState == null && initialBvid.isNotBlank()) {
+            viewModel.loadVideo(
+                bvid = initialBvid,
+                cid = initialCid,
+                autoPlay = true,
+                fallbackResumePositionMs = initialResumePositionMs
+            )
+        }
     }
 
     //  封面显示模式状态

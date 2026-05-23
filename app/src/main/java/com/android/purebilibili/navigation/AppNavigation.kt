@@ -1500,7 +1500,13 @@ fun AppNavigation(
                                 },
                                 onNavigateToAudioMode = {
                                     isNavigatingToAudioMode = true
-                                    pushNavigation3Key(BiliPaiNavKey.AudioMode)
+                                    pushNavigation3Key(
+                                        BiliPaiNavKey.AudioMode(
+                                            sourceBvid = videoKey.bvid,
+                                            sourceCid = videoKey.cid,
+                                            sourceResumePositionMs = videoKey.resumePositionMs
+                                        )
+                                    )
                                 },
                                 onNavigateToSearch = { pushNavigation3Key(BiliPaiNavKey.Search) },
                                 onSearchKeywordClick = submitSearchKeywordInNavigation3,
@@ -1828,6 +1834,7 @@ fun AppNavigation(
                                 onSearchClick = { pushNavigation3Key(BiliPaiNavKey.Search) }
                             )
                         BiliPaiNavEntryContentRole.AUDIO_MODE -> {
+                                val audioModeKey = key as BiliPaiNavKey.AudioMode
                                 val viewModel: com.android.purebilibili.feature.video.viewmodel.PlayerViewModel =
                                     viewModel()
                                 DisposableEffect(Unit) {
@@ -1836,6 +1843,10 @@ fun AppNavigation(
                                         onAudioModeExit()
                                     }
                                 }
+                                val initialLoadRequest = resolveAudioModeInitialLoadRequest(
+                                    key = audioModeKey,
+                                    hasDisplayState = false
+                                )
                                 com.android.purebilibili.feature.video.screen.AudioModeScreen(
                                     viewModel = viewModel,
                                     onBack = { performSystemBackAction() },
@@ -1843,7 +1854,10 @@ fun AppNavigation(
                                         navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)
                                         navigateToVideoInNavigation3(currentBvid, currentCid, "")
                                     },
-                                    isInPipMode = isInPipMode
+                                    isInPipMode = isInPipMode,
+                                    initialBvid = initialLoadRequest?.bvid.orEmpty(),
+                                    initialCid = initialLoadRequest?.cid ?: 0L,
+                                    initialResumePositionMs = initialLoadRequest?.resumePositionMs ?: 0L
                                 )
                             }
                         BiliPaiNavEntryContentRole.PARTITION -> com.android.purebilibili.feature.partition.PartitionScreen(

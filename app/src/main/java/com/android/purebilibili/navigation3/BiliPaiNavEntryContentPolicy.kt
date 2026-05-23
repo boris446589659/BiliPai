@@ -97,7 +97,7 @@ internal fun resolveBiliPaiNavEntryContentRole(key: BiliPaiNavKey): BiliPaiNavEn
         BiliPaiNavKey.LikeMe -> BiliPaiNavEntryContentRole.LIKE_ME
         BiliPaiNavKey.SystemNotice -> BiliPaiNavEntryContentRole.SYSTEM_NOTICE
         is BiliPaiNavKey.Chat -> BiliPaiNavEntryContentRole.CHAT
-        BiliPaiNavKey.AudioMode -> BiliPaiNavEntryContentRole.AUDIO_MODE
+        is BiliPaiNavKey.AudioMode -> BiliPaiNavEntryContentRole.AUDIO_MODE
         BiliPaiNavKey.Login -> BiliPaiNavEntryContentRole.LOGIN
         BiliPaiNavKey.Story -> BiliPaiNavEntryContentRole.STORY
         BiliPaiNavKey.Partition -> BiliPaiNavEntryContentRole.PARTITION
