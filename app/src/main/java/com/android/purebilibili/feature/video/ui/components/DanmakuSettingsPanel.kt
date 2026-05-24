@@ -963,7 +963,7 @@ fun DanmakuSettingsPanel(
                                     text = if (totalBlockRuleCount > 0) {
                                         "已维护 $totalBlockRuleCount 条规则，修改后立即生效"
                                     } else {
-                                        "每行一个，支持关键词、正则与 UID(hash)：regex:xxx / re:xxx / /xxx/ / uid:xxx"
+                                        "每行一个，也可粘贴 JSON：keywords / regex / userHashes"
                                     },
                                     color = panelColors.supportingColor,
                                     fontSize = 11.sp

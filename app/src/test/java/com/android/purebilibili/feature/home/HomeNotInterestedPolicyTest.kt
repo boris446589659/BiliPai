@@ -101,4 +101,15 @@ class HomeNotInterestedPolicyTest {
         assertTrue(transition.shouldStartDissolve)
         assertFalse(transition.shouldRemoveImmediately)
     }
+
+    @Test
+    fun `disabled card animation removes not interested card immediately`() {
+        val transition = resolveHomeDismissVisualTransition(
+            isFeedbackRecorded = true,
+            cardAnimationEnabled = false
+        )
+
+        assertFalse(transition.shouldStartDissolve)
+        assertTrue(transition.shouldRemoveImmediately)
+    }
 }

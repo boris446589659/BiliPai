@@ -187,6 +187,9 @@ data class VideoItem(
     val pic: String = "",
     val owner: Owner = Owner(),
     val stat: Stat = Stat(),
+    val tid: Int = 0,
+    val tname: String = "",
+    val tags: List<String> = emptyList(),
     val duration: Int = 0,
     val progress: Int = -1,
     val view_at: Long = 0,
@@ -217,7 +220,8 @@ data class VideoRights(
 data class Owner(
     val mid: Long = 0,
     val name: String = "",
-    val face: String = ""
+    val face: String = "",
+    val level: Int = 0
 )
 
 @Serializable
@@ -272,6 +276,8 @@ data class RecommendItem(
     val pubdate: Long? = null,
     val owner: RecommendOwner? = null,
     val stat: RecommendStat? = null,
+    val tid: Int = 0,
+    val tname: String = "",
     //  [新增] 视频尺寸信息 (用于判断竖屏视频)
     val dimension: Dimension? = null,
     val rights: VideoRights? = null
@@ -285,7 +291,14 @@ data class RecommendItem(
             title = title ?: "",
             pic = pic ?: "",
             owner = Owner(mid = owner?.mid ?: 0, name = owner?.name ?: "", face = owner?.face ?: ""),
-            stat = Stat(view = requestStatConvert(stat?.view), like = requestStatConvert(stat?.like), danmaku = requestStatConvert(stat?.danmaku)),
+            stat = Stat(
+                view = requestStatConvert(stat?.view),
+                like = requestStatConvert(stat?.like),
+                danmaku = requestStatConvert(stat?.danmaku),
+                reply = requestStatConvert(stat?.reply)
+            ),
+            tid = tid,
+            tname = tname,
             duration = duration ?: 0,
             pubdate = pubdate ?: 0L,
             isVertical = dimension?.isVertical == true,
@@ -306,7 +319,8 @@ data class RecommendOwner(
 data class RecommendStat(
     val view: Long = 0,
     val like: Long = 0,
-    val danmaku: Long = 0
+    val danmaku: Long = 0,
+    val reply: Long = 0
 )
 
 // --- 4. 热门视频 Response ---

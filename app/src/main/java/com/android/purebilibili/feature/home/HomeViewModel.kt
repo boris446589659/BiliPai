@@ -698,7 +698,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // [New] Mark as Not Interested (Dislike)
-    fun markNotInterested(bvid: String) {
+    fun markNotInterested(bvid: String, cardAnimationEnabled: Boolean = true) {
         viewModelScope.launch {
             val currentCategory = _uiState.value.currentCategory
             val categoryVideos = _uiState.value.categoryStates[currentCategory]?.videos.orEmpty()
@@ -715,9 +715,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     pendingNotInterestedRefilterBvids += bvid
                 }
             }
-            val transition = resolveHomeNotInterestedVisualTransition(
+            val transition = resolveHomeDismissVisualTransition(
                 isFeedbackRecorded = true,
-                isDissolveAnimationAvailable = true
+                cardAnimationEnabled = cardAnimationEnabled
             )
             if (transition.shouldStartDissolve) {
                 startVideoDissolve(bvid)

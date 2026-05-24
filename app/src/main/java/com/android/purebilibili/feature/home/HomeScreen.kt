@@ -1359,7 +1359,19 @@ fun HomeScreen(
                                  // Data Content
                                  // [性能优化] Stabilize event callbacks to prevent recomposition on scroll
                                  val onLoadMoreCallback = remember(viewModel) { { viewModel.loadMore() } }
-                                 val onDismissVideoCallback = remember(viewModel) { { bvid: String -> viewModel.startVideoDissolve(bvid) } }
+                                 val onDismissVideoCallback = remember(viewModel, cardAnimationEnabled) {
+                                     { bvid: String ->
+                                         val transition = resolveHomeDismissVisualTransition(
+                                             isFeedbackRecorded = true,
+                                             cardAnimationEnabled = cardAnimationEnabled
+                                         )
+                                         if (transition.shouldStartDissolve) {
+                                             viewModel.startVideoDissolve(bvid)
+                                         } else if (transition.shouldRemoveImmediately) {
+                                             viewModel.completeVideoDissolve(bvid)
+                                         }
+                                     }
+                                 }
                                  val onWatchLaterCallback = remember(viewModel) { { bvid: String, aid: Long -> viewModel.addToWatchLater(bvid, aid) } }
                                  val onDissolveCompleteCallback = remember(viewModel) { { bvid: String -> viewModel.completeVideoDissolve(bvid) } }
                                  val onLongPressCallback = remember(targetVideoItemState) { { item: VideoItem -> targetVideoItemState.value = item } }
@@ -1764,7 +1776,7 @@ fun HomeScreen(
                     targetVideoItemState.value = null
                 },
                 onNotInterested = {
-                    viewModel.markNotInterested(item.bvid)
+                    viewModel.markNotInterested(item.bvid, cardAnimationEnabled = cardAnimationEnabled)
                     targetVideoItemState.value = null
                 },
                 onBlockCreator = {

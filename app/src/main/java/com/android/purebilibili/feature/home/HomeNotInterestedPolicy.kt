@@ -25,6 +25,16 @@ internal fun resolveHomeNotInterestedVisualTransition(
     )
 }
 
+internal fun resolveHomeDismissVisualTransition(
+    isFeedbackRecorded: Boolean,
+    cardAnimationEnabled: Boolean
+): HomeNotInterestedVisualTransition {
+    return resolveHomeNotInterestedVisualTransition(
+        isFeedbackRecorded = isFeedbackRecorded,
+        isDissolveAnimationAvailable = cardAnimationEnabled
+    )
+}
+
 internal fun resolveHomeNotInterestedAction(video: VideoItem): HomeNotInterestedAction {
     val creatorMid = video.owner.mid
     return HomeNotInterestedAction(
