@@ -71,9 +71,11 @@ import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ContainerLevel
 import com.android.purebilibili.core.ui.motion.AppMotionTokens
+import com.android.purebilibili.core.ui.rememberAppInboxIcon
 import com.android.purebilibili.core.ui.rememberAppSettingsIcon
 import com.android.purebilibili.core.store.HomeHeaderBlurMode
 import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.HomeTopRightAction
 import com.android.purebilibili.core.store.resolveEffectiveLiquidGlassEnabled
 import com.android.purebilibili.feature.home.resolveHomeTopCategories
 import com.android.purebilibili.feature.home.resolveHomeTopCollapsedHandleHeight
@@ -1450,6 +1452,7 @@ fun iOSHomeHeader(
     user: UserState,
     onAvatarClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onInboxClick: () -> Unit = {},
     onSearchClick: () -> Unit,
     topCategories: List<String> = resolveHomeTopCategories().map { it.label },
     topCategoryKeys: List<String> = resolveHomeTopCategories().map { it.name },
@@ -1497,7 +1500,16 @@ fun iOSHomeHeader(
     val edgeButtonShape = resolveHomeTopEdgeButtonShape(uiPreset, androidNativeVariant)
     val searchContainerShape = resolveHomeTopSearchContainerShape(uiPreset, androidNativeVariant)
     val searchIcon = if (uiPreset == UiPreset.MD3) Icons.Outlined.Search else CupertinoIcons.Default.MagnifyingGlass
+    val topRightAction = homeSettings?.homeTopRightAction ?: HomeTopRightAction.SETTINGS
     val settingsIcon = rememberAppSettingsIcon()
+    val inboxIcon = rememberAppInboxIcon()
+    val topRightActionIcon = if (topRightAction == HomeTopRightAction.INBOX) inboxIcon else settingsIcon
+    val topRightActionContentDescription = topRightAction.label
+    val onTopRightActionClick = if (topRightAction == HomeTopRightAction.INBOX) {
+        onInboxClick
+    } else {
+        onSettingsClick
+    }
     val topChromeLiquidGlassEnabled = resolveHomeTopChromeLiquidGlassEnabled(
         homeSettings = homeSettings,
         uiPreset = uiPreset
@@ -2110,7 +2122,7 @@ fun iOSHomeHeader(
                     }
             )
 
-            // 2. Search Bar + Avatar + Settings
+                    // 2. Search Bar + Avatar + right action
             // 高度和透明度由外部直接控制，实现物理跟手
             Box(
                 modifier = Modifier
@@ -2599,20 +2611,20 @@ fun iOSHomeHeader(
                                     .then(
                                         if (uiPreset == UiPreset.MD3) {
                                             Modifier.clickable {
-                                                performHomeTopBarTap(haptic = haptic, onClick = onSettingsClick)
+                                                performHomeTopBarTap(haptic = haptic, onClick = onTopRightActionClick)
                                             }
                                         } else {
                                             Modifier.iOSTapEffect {
                                                 haptic(HapticType.LIGHT)
-                                                onSettingsClick()
+                                                onTopRightActionClick()
                                             }
                                         }
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    settingsIcon,
-                                    contentDescription = "设置",
+                                    topRightActionIcon,
+                                    contentDescription = topRightActionContentDescription,
                                     tint = if (isLightMode) {
                                         topForegroundColor
                                     } else {

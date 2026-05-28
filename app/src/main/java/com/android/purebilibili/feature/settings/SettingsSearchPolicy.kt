@@ -641,9 +641,29 @@ private val SETTINGS_SEARCH_INDEX: List<SettingsSearchEntry> = listOf(
     SettingsSearchEntry(
         target = SettingsSearchTarget.BOTTOM_BAR,
         title = "顶部标签管理",
-        subtitle = "显示/隐藏、排序、自动收缩",
+        subtitle = "显示/隐藏、排序、自动收缩、右上角入口",
         section = "导航设置",
-        aliases = listOf("顶部标签", "顶部标签样式", "顶部模糊", "顶部标签管理", "标签排序", "标签显示", "顶部栏自动收缩", "自动收缩", "自动隐藏", "回到顶部显示", "推荐分类", "直播标签"),
+        aliases = listOf(
+            "顶部标签",
+            "顶部标签样式",
+            "顶部模糊",
+            "顶部标签管理",
+            "标签排序",
+            "标签显示",
+            "顶部栏自动收缩",
+            "自动收缩",
+            "自动隐藏",
+            "回到顶部显示",
+            "推荐分类",
+            "直播标签",
+            "首页右上角",
+            "首页右上角入口",
+            "首页右上角消息",
+            "消息入口",
+            "设置图标",
+            "右上角设置",
+            "右上角消息"
+        ),
         focusId = SettingsSearchFocusIds.BOTTOM_BAR_TOP_TABS
     ),
     SettingsSearchEntry(

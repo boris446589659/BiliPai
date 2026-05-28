@@ -1566,6 +1566,7 @@ fun HomeScreen(
                 }
             },
             onSettingsClick = onSettingsClick,
+            onInboxClick = onInboxClick,
             onSearchClick = onSearchClick,
             topCategories = localizedTopCategoryLabels,
             topCategoryKeys = topCategories.map { it.name },

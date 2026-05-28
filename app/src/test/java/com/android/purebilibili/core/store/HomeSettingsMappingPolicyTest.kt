@@ -23,6 +23,7 @@ class HomeSettingsMappingPolicyTest {
         assertTrue(result.isBottomBarFloating)
         assertEquals(0, result.bottomBarLabelMode)
         assertEquals(SettingsManager.TopTabLabelMode.TEXT_ONLY, result.topTabLabelMode)
+        assertEquals(HomeTopRightAction.SETTINGS, result.homeTopRightAction)
         assertTrue(result.isHeaderBlurEnabled)
         assertEquals(HomeHeaderBlurMode.FOLLOW_PRESET, result.headerBlurMode)
         assertTrue(result.isBottomBarBlurEnabled)
@@ -60,6 +61,7 @@ class HomeSettingsMappingPolicyTest {
             booleanPreferencesKey("bottom_bar_floating") to false,
             intPreferencesKey("bottom_bar_label_mode") to 2,
             intPreferencesKey("top_tab_label_mode") to 1,
+            intPreferencesKey("home_top_right_action") to HomeTopRightAction.INBOX.value,
             booleanPreferencesKey("header_blur_enabled") to false,
             booleanPreferencesKey("header_collapse_enabled") to false,
             booleanPreferencesKey("bottom_bar_blur_enabled") to false,
@@ -93,6 +95,7 @@ class HomeSettingsMappingPolicyTest {
         assertFalse(result.isBottomBarFloating)
         assertEquals(2, result.bottomBarLabelMode)
         assertEquals(1, result.topTabLabelMode)
+        assertEquals(HomeTopRightAction.INBOX, result.homeTopRightAction)
         assertFalse(result.isHeaderBlurEnabled)
         assertEquals(HomeHeaderBlurMode.ALWAYS_OFF, result.headerBlurMode)
         assertFalse(result.isHeaderCollapseEnabled)
@@ -134,6 +137,17 @@ class HomeSettingsMappingPolicyTest {
         val result = mapHomeSettingsFromPreferences(prefs)
 
         assertEquals(HomeFeedCardWidthPreset.AUTO, result.homeFeedCardWidthPreset)
+    }
+
+    @Test
+    fun invalidHomeTopRightActionFallsBackToSettings() {
+        val prefs = mutablePreferencesOf(
+            intPreferencesKey("home_top_right_action") to 99
+        )
+
+        val result = mapHomeSettingsFromPreferences(prefs)
+
+        assertEquals(HomeTopRightAction.SETTINGS, result.homeTopRightAction)
     }
 
     @Test

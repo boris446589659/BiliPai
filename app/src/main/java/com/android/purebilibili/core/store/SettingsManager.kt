@@ -355,6 +355,7 @@ data class HomeSettings(
     val isBottomBarFloating: Boolean = true,
     val bottomBarLabelMode: Int = 0,       // (0=图标+文字, 1=仅图标, 2=仅文字)
     val topTabLabelMode: Int = 2,          // (0=图标+文字, 1=仅图标, 2=仅文字)
+    val homeTopRightAction: HomeTopRightAction = HomeTopRightAction.SETTINGS,
     val isHeaderBlurEnabled: Boolean = true,
     val headerBlurMode: HomeHeaderBlurMode = HomeHeaderBlurMode.FOLLOW_PRESET,
     val isBottomBarBlurEnabled: Boolean = true,
@@ -425,6 +426,16 @@ enum class HomeWallpaperEffectScope(val value: Int, val label: String) {
     companion object {
         fun fromValue(value: Int): HomeWallpaperEffectScope =
             entries.find { it.value == value } ?: HOME_ONLY
+    }
+}
+
+enum class HomeTopRightAction(val value: Int, val label: String) {
+    SETTINGS(0, "设置"),
+    INBOX(1, "消息");
+
+    companion object {
+        fun fromValue(value: Int): HomeTopRightAction =
+            entries.find { it.value == value } ?: SETTINGS
     }
 }
 
@@ -802,6 +813,7 @@ object SettingsManager {
     private val KEY_BOTTOM_BAR_LABEL_MODE = intPreferencesKey("bottom_bar_label_mode")
     //  [新增] 顶部标签显示模式 (0=图标+文字, 1=仅图标, 2=仅文字)
     private val KEY_TOP_TAB_LABEL_MODE = intPreferencesKey("top_tab_label_mode")
+    private val KEY_HOME_TOP_RIGHT_ACTION = intPreferencesKey("home_top_right_action")
     //  [新增] 顶部标签自定义 - 顺序和可见性
     private val KEY_TOP_TAB_ORDER = stringPreferencesKey("top_tab_order")
     private val KEY_TOP_TAB_VISIBLE_TABS = stringPreferencesKey("top_tab_visible_tabs")
@@ -955,6 +967,9 @@ object SettingsManager {
             isBottomBarFloating = preferences[KEY_BOTTOM_BAR_FLOATING] ?: true,
             bottomBarLabelMode = preferences[KEY_BOTTOM_BAR_LABEL_MODE] ?: BottomBarLabelMode.ICON_AND_TEXT,
             topTabLabelMode = preferences[KEY_TOP_TAB_LABEL_MODE] ?: TopTabLabelMode.TEXT_ONLY,
+            homeTopRightAction = HomeTopRightAction.fromValue(
+                preferences[KEY_HOME_TOP_RIGHT_ACTION] ?: HomeTopRightAction.SETTINGS.value
+            ),
             isHeaderBlurEnabled = headerBlurMode != HomeHeaderBlurMode.ALWAYS_OFF,
             headerBlurMode = headerBlurMode,
             isHeaderCollapseEnabled = preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true,
@@ -2070,6 +2085,19 @@ object SettingsManager {
 
     suspend fun setTopTabLabelMode(context: Context, value: Int) {
         context.settingsDataStore.edit { preferences -> preferences[KEY_TOP_TAB_LABEL_MODE] = value }
+    }
+
+    fun getHomeTopRightAction(context: Context): Flow<HomeTopRightAction> = context.settingsDataStore.data
+        .map { preferences ->
+            HomeTopRightAction.fromValue(
+                preferences[KEY_HOME_TOP_RIGHT_ACTION] ?: HomeTopRightAction.SETTINGS.value
+            )
+        }
+
+    suspend fun setHomeTopRightAction(context: Context, action: HomeTopRightAction) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_HOME_TOP_RIGHT_ACTION] = action.value
+        }
     }
 
     //  [新增] --- 顶部标签顺序配置 ---
@@ -5157,6 +5185,7 @@ object SettingsManager {
             BooleanShareablePreferenceDefinition(KEY_BOTTOM_BAR_FLOATING, SettingsShareSection.APPEARANCE),
             IntShareablePreferenceDefinition(KEY_BOTTOM_BAR_LABEL_MODE, SettingsShareSection.APPEARANCE),
             IntShareablePreferenceDefinition(KEY_TOP_TAB_LABEL_MODE, SettingsShareSection.APPEARANCE),
+            IntShareablePreferenceDefinition(KEY_HOME_TOP_RIGHT_ACTION, SettingsShareSection.APPEARANCE),
             StringShareablePreferenceDefinition(KEY_TOP_TAB_ORDER, SettingsShareSection.APPEARANCE),
             StringShareablePreferenceDefinition(KEY_TOP_TAB_VISIBLE_TABS, SettingsShareSection.APPEARANCE),
             StringShareablePreferenceDefinition(KEY_DYNAMIC_TAB_VISIBLE_TABS, SettingsShareSection.APPEARANCE),

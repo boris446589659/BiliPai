@@ -1040,6 +1040,7 @@ fun VideoDetailScreen(
     autoEnterPortraitFromRoute: Boolean = false,
     resumePositionMsFromRoute: Long = 0L,
     openCommentRootRpidFromRoute: Long = 0L,
+    openCommentTargetRpidFromRoute: Long = 0L,
     sourceRouteForSharedElement: String? = null,
     isReturningFromDetail: Boolean = false,
     isQuickReturningFromDetail: Boolean = false,
@@ -1103,7 +1104,11 @@ fun VideoDetailScreen(
     var isNavigatingToMiniMode by remember { mutableStateOf(false) }
     var hasAutoEnteredAudioMode by rememberSaveable { mutableStateOf(false) }
     var hasAutoEnteredPortraitFromRoute by rememberSaveable(bvid) { mutableStateOf(false) }
-    var hasHandledCommentRootFromRoute by rememberSaveable(bvid, openCommentRootRpidFromRoute) { mutableStateOf(false) }
+    var hasHandledCommentRootFromRoute by rememberSaveable(
+        bvid,
+        openCommentRootRpidFromRoute,
+        openCommentTargetRpidFromRoute
+    ) { mutableStateOf(false) }
     // 🔄 [Seamless Playback] Internal BVID state to support seamless switching in portrait mode
     var currentBvid by rememberSaveable(bvid) { mutableStateOf(bvid) }
 
@@ -1243,6 +1248,7 @@ fun VideoDetailScreen(
 
     LaunchedEffect(
         openCommentRootRpidFromRoute,
+        openCommentTargetRpidFromRoute,
         commentState.replies,
         commentState.isRepliesLoading,
         subReplyState.visible
@@ -1253,10 +1259,16 @@ fun VideoDetailScreen(
 
         val rootReply = commentState.replies.firstOrNull { it.rpid == openCommentRootRpidFromRoute }
         if (rootReply != null) {
-            commentViewModel.openSubReply(rootReply)
+            commentViewModel.openSubReply(rootReply, openCommentTargetRpidFromRoute)
             hasHandledCommentRootFromRoute = true
-        } else if (!commentState.isRepliesLoading && commentState.isRepliesEnd) {
-            hasHandledCommentRootFromRoute = true
+        } else if (!commentState.isRepliesLoading) {
+            val openStarted = commentViewModel.openSubReplyFromRoute(
+                rootReplyId = openCommentRootRpidFromRoute,
+                targetReplyId = openCommentTargetRpidFromRoute
+            )
+            if (openStarted) {
+                hasHandledCommentRootFromRoute = true
+            }
         }
     }
     val commentDefaultSortMode by com.android.purebilibili.core.store.SettingsManager
@@ -4320,6 +4332,11 @@ fun VideoDetailScreen(
             successState = successState,
             commentState = commentState,
             commentViewModel = commentViewModel,
+            forceInitialize = shouldForceInitializeDetachedCommentThreadHostForRoute(
+                routeCommentRootRpid = openCommentRootRpidFromRoute,
+                aid = successState?.info?.aid ?: 0L,
+                hasHandledRouteComment = hasHandledCommentRootFromRoute
+            ),
             viewModel = viewModel,
             onUpClick = navigateToUserSpaceFromVideo,
             onNavigateToRelatedVideo = { targetVideoId ->
@@ -5290,6 +5307,14 @@ internal fun resolveVideoDetailCommentThreadHostMainSheetVisible(
     return useEmbeddedPresentation && subReplyVisible
 }
 
+internal fun shouldForceInitializeDetachedCommentThreadHostForRoute(
+    routeCommentRootRpid: Long,
+    aid: Long,
+    hasHandledRouteComment: Boolean
+): Boolean {
+    return routeCommentRootRpid > 0L && aid > 0L && !hasHandledRouteComment
+}
+
 internal fun shouldApplyPhoneAutoRotatePolicy(
     isCompactDevice: Boolean
 ): Boolean {
@@ -5646,6 +5671,7 @@ private fun DetachedVideoCommentThreadHost(
     successState: PlayerUiState.Success?,
     commentState: CommentUiState,
     commentViewModel: VideoCommentViewModel,
+    forceInitialize: Boolean,
     viewModel: PlayerViewModel,
     onUpClick: (Long) -> Unit,
     onNavigateToRelatedVideo: (String) -> Unit,
@@ -5685,6 +5711,7 @@ private fun DetachedVideoCommentThreadHost(
         topReservedPx = topReservedPx,
         onTimestampClick = onTimestampClick,
         maxTimestampMs = successState?.videoDurationMs?.takeIf { it > 0L },
+        forceInitialize = forceInitialize,
         handleFraudEvents = false
     )
 }
