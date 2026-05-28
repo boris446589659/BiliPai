@@ -112,9 +112,9 @@ class VideoCommentSheetHostPolicyTest {
     }
 
     @Test
-    fun `embedded portrait pager thread detail keeps main sheet height without top reserve`() {
+    fun `embedded portrait pager thread detail covers content when top reserve is not measured`() {
         assertEquals(
-            0.60f,
+            1f,
             resolveVideoCommentSheetHostHeightFraction(
                 hostContent = VideoCommentSheetHostContent.THREAD_DETAIL,
                 mainSheetVisible = true,

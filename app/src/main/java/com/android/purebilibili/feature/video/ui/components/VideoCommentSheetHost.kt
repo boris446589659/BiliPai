@@ -121,16 +121,10 @@ internal fun resolveVideoCommentSheetHostHeightFraction(
 ): Float {
     return when (hostContent) {
         VideoCommentSheetHostContent.MAIN_LIST -> MAIN_COMMENT_SHEET_HEIGHT_FRACTION
-        VideoCommentSheetHostContent.THREAD_DETAIL -> {
-            if (mainSheetVisible && topReservedPx <= 0) {
-                MAIN_COMMENT_SHEET_HEIGHT_FRACTION
-            } else {
-                resolveVideoSubReplySheetMaxHeightFraction(
-                    screenHeightPx = screenHeightPx,
-                    topReservedPx = topReservedPx
-                )
-            }
-        }
+        VideoCommentSheetHostContent.THREAD_DETAIL -> resolveVideoSubReplySheetMaxHeightFraction(
+            screenHeightPx = screenHeightPx,
+            topReservedPx = topReservedPx
+        )
         VideoCommentSheetHostContent.HIDDEN -> 0f
     }
 }
