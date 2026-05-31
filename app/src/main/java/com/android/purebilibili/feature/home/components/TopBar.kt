@@ -135,8 +135,8 @@ internal fun resolveMd3TopTabLayoutVisibleSlots(
     showPartitionAction: Boolean
 ): Int {
     val hasSupportedLabelMode = normalizeTopTabLabelMode(labelMode) in 0..2
-    return if (!showPartitionAction && hasSupportedLabelMode && categoryCount in 4..6) {
-        categoryCount
+    return if (!showPartitionAction && hasSupportedLabelMode && categoryCount >= 4) {
+        categoryCount.coerceAtMost(6)
     } else {
         resolveMd3TopTabVisibleSlots()
     }

@@ -97,6 +97,26 @@ class TopTabLayoutPolicyTest {
     }
 
     @Test
+    fun `md3 top tabs cap expanded custom tabs at six visible slots`() {
+        assertEquals(
+            6,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 8,
+                labelMode = 0,
+                showPartitionAction = false
+            )
+        )
+        assertEquals(
+            6,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 8,
+                labelMode = 2,
+                showPartitionAction = false
+            )
+        )
+    }
+
+    @Test
     fun `md3 top tabs keep compact scrollable slots for external partition action`() {
         assertEquals(
             3,
