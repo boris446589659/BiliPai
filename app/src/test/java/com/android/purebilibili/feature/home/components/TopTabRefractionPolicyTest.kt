@@ -16,6 +16,8 @@ class TopTabRefractionPolicyTest {
 
         assertTrue(source.contains("shouldUseMovingIosCapsule"))
         assertTrue(source.contains("shouldUseLiquidGlassIndicator"))
+        assertTrue(source.contains("shouldForceDragLiquidGlassIndicator"))
+        assertTrue(source.contains("forceChromaticAberration = topTabDragActive"))
         assertTrue(source.contains("indicatorHeight = (rowHeight - 8.dp).coerceAtLeast(2.dp)"))
         assertTrue(source.contains("indicatorHeight = 4.dp"))
         assertTrue(source.contains("lensAmountScale = 0.35f"))

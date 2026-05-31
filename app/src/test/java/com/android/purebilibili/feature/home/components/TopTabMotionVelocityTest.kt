@@ -223,6 +223,28 @@ class TopTabMotionVelocityTest {
     }
 
     @Test
+    fun `top tab indicator avoidance grows only while dragging`() {
+        assertEquals(
+            0f,
+            resolveTopTabIndicatorAvoidancePaddingDp(
+                rowHeightDp = 52f,
+                scaleY = 1.6f,
+                isDragging = false
+            ),
+            0.001f
+        )
+        assertEquals(
+            17.2f,
+            resolveTopTabIndicatorAvoidancePaddingDp(
+                rowHeightDp = 52f,
+                scaleY = 1.6f,
+                isDragging = true
+            ),
+            0.001f
+        )
+    }
+
+    @Test
     fun `top tab long press drag is attached to selected item instead of lazy row scroll container`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
         val lazyRowSource = source
@@ -231,6 +253,17 @@ class TopTabMotionVelocityTest {
 
         assertTrue(source.contains("topTabSelectedItemLongPressDrag("))
         assertFalse(lazyRowSource.contains("topTabSelectedItemLongPressDrag("))
+    }
+
+    @Test
+    fun `top tab drag clearance moves search up and list content down`() {
+        val headerSource = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/iOSHomeHeader.kt")
+        val homeSource = loadSource("app/src/main/java/com/android/purebilibili/feature/home/HomeScreen.kt")
+
+        assertTrue(headerSource.contains("translationY = searchContentTranslationYPx -"))
+        assertTrue(headerSource.contains("onIndicatorClearanceChanged = { clearance ->"))
+        assertTrue(homeSource.contains("val listTopPadding = baseListTopPadding + topTabIndicatorClearance"))
+        assertTrue(homeSource.contains("onTopTabIndicatorClearanceChanged = { clearance ->"))
     }
 
     @Test

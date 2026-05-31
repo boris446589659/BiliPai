@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.luminance  //  状态栏亮度计算
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.core.ui.ComfortablePullToRefreshBox
@@ -1079,18 +1080,20 @@ fun HomeScreen(
         androidNativeVariant = androidNativeVariant,
         labelMode = homeSettings.topTabLabelMode
     )
+    var topTabIndicatorClearance by remember { mutableStateOf<Dp>(0.dp) }
     val searchCollapseDistanceDp = resolveHomeTopSearchCollapseDistance(
         searchBarHeight = searchBarHeightDp,
         uiPreset = uiPreset,
         androidNativeVariant = androidNativeVariant
     )
-    val listTopPadding = resolveHomeTopReservedListPadding(
+    val baseListTopPadding = resolveHomeTopReservedListPadding(
         statusBarHeight = statusBarHeight,
         searchBarHeight = searchBarHeightDp,
         tabRowHeight = tabRowHeightDp,
         uiPreset = uiPreset,
         androidNativeVariant = androidNativeVariant
     )
+    val listTopPadding = baseListTopPadding + topTabIndicatorClearance
     
     // Pixels
     val searchCollapseDistancePx = with(density) { searchCollapseDistanceDp.toPx() }
@@ -1718,7 +1721,12 @@ fun HomeScreen(
             isTransitionRunning = isHeaderTransitionRunning,
             forceLowBlurBudget = forceLowBlurBudget,
             interactionBudget = homeInteractionMotionBudget,
-            uiSkinDecoration = homeUiSkinDecoration
+            uiSkinDecoration = homeUiSkinDecoration,
+            onTopTabIndicatorClearanceChanged = { clearance ->
+                if (topTabIndicatorClearance != clearance) {
+                    topTabIndicatorClearance = clearance
+                }
+            }
         )
 
         AnimatedVisibility(

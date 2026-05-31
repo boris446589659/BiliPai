@@ -1523,7 +1523,8 @@ fun iOSHomeHeader(
     isTransitionRunning: Boolean = false,
     forceLowBlurBudget: Boolean = false,
     interactionBudget: HomeInteractionMotionBudget = HomeInteractionMotionBudget.FULL,
-    uiSkinDecoration: HomeUiSkinDecoration? = null
+    uiSkinDecoration: HomeUiSkinDecoration? = null,
+    onTopTabIndicatorClearanceChanged: (Dp) -> Unit = {}
 ) {
     val uiPreset = LocalUiPreset.current
     val androidNativeVariant = LocalAndroidNativeVariant.current
@@ -1917,6 +1918,7 @@ fun iOSHomeHeader(
     val searchToTabsSpacing = resolveHomeTopSearchToTabsSpacing(uiPreset, androidNativeVariant)
     val currentSearchToTabsSpacing = searchToTabsSpacing * searchContentRevealFraction
     val currentUnifiedDividerBottomSpacing = 4.dp * searchContentRevealFraction
+    var topTabIndicatorClearance by remember { mutableStateOf(0.dp) }
 
     val tabHorizontalPadding by animateDpAsState(
         targetValue = resolveHomeTopTabHorizontalPadding(
@@ -2122,7 +2124,13 @@ fun iOSHomeHeader(
                 skinPlainStyle = shouldUseSkinPlainTopTabs,
                 skinPlainContentColor = null,
                 topTabSkinIconPaths = uiSkinDecoration?.topTabSkinIconPaths.orEmpty(),
-                partitionSkinIconPath = uiSkinDecoration?.topTabPartitionIconPath()
+                partitionSkinIconPath = uiSkinDecoration?.topTabPartitionIconPath(),
+                onIndicatorClearanceChanged = { clearance ->
+                    if (topTabIndicatorClearance != clearance) {
+                        topTabIndicatorClearance = clearance
+                    }
+                    onTopTabIndicatorClearanceChanged(clearance)
+                }
             )
         }
     }
@@ -2290,7 +2298,8 @@ fun iOSHomeHeader(
                             .height(currentSearchHeight)
                             .graphicsLayer {
                                 alpha = searchAlpha
-                                translationY = searchContentTranslationYPx
+                                translationY = searchContentTranslationYPx -
+                                    with(density) { topTabIndicatorClearance.toPx() }
                             }
                             .clip(androidx.compose.ui.graphics.RectangleShape)
                     ) {

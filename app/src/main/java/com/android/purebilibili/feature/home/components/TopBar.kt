@@ -639,7 +639,8 @@ private fun LightweightHomeTopTabs(
     backdrop: LayerBackdrop? = null,
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
     partitionSkinIconPath: String? = null,
-    showPartitionAction: Boolean = true
+    showPartitionAction: Boolean = true,
+    onIndicatorClearanceChanged: (Dp) -> Unit = {}
 ) {
     val uiPreset = LocalUiPreset.current
     val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
@@ -831,6 +832,17 @@ private fun LightweightHomeTopTabs(
             dragScaleProgress = topTabIndicatorDragScaleProgress,
             motionSpec = topTabDragMotionSpec
         )
+        val indicatorAvoidancePadding = resolveTopTabIndicatorAvoidancePaddingDp(
+            rowHeightDp = rowHeight.value,
+            scaleY = topTabIndicatorLayerTransform.scaleY,
+            isDragging = topTabDragActive
+        ).dp
+        SideEffect {
+            onIndicatorClearanceChanged(indicatorAvoidancePadding)
+        }
+        DisposableEffect(Unit) {
+            onDispose { onIndicatorClearanceChanged(0.dp) }
+        }
         val md3IndicatorTranslationXPx by remember(topTabIndicatorPosition, itemWidth, md3IndicatorWidth, density, listState) {
             derivedStateOf {
                 with(density) {
@@ -846,7 +858,8 @@ private fun LightweightHomeTopTabs(
         val shouldUseMovingIosCapsule = effectiveRenderer == HomeTopTabRenderer.IOS &&
             !skinPlainStyle &&
             !hasSkinStickerIcons
-        val shouldUseLiquidGlassIndicator = isLiquidGlassEnabled &&
+        val shouldForceDragLiquidGlassIndicator = topTabDragActive && backdrop != null
+        val shouldUseLiquidGlassIndicator = (isLiquidGlassEnabled || shouldForceDragLiquidGlassIndicator) &&
             !skinPlainStyle &&
             !hasSkinStickerIcons
         val measuredSelectedItemLeftPx by remember(shouldUseMovingIosCapsule) {
@@ -934,12 +947,13 @@ private fun LightweightHomeTopTabs(
                                 isDarkTheme = isDarkTheme,
                                 selectionFraction = 1f
                             ),
-                            isLiquidGlassEnabled = true,
+                            isLiquidGlassEnabled = isLiquidGlassEnabled || shouldForceDragLiquidGlassIndicator,
                             indicatorWidthMultiplier = 1f,
                             indicatorMinWidth = 0.dp,
                             indicatorMaxWidth = (itemWidth - 6.dp).coerceAtLeast(0.dp),
                             maxWidthToItemRatio = 1f,
                             indicatorHeight = (rowHeight - 8.dp).coerceAtLeast(2.dp),
+                            forceChromaticAberration = topTabDragActive,
                             liquidGlassStyle = liquidGlassStyle,
                             liquidGlassTuning = liquidGlassTuning,
                             backdrop = backdrop,
@@ -1053,7 +1067,7 @@ private fun LightweightHomeTopTabs(
                             velocity = if (topTabDragActive) topTabDragState.velocityPxPerSecond else 0f,
                             startPadding = rowScrollStartPadding,
                             color = indicatorColor.copy(alpha = 0.42f),
-                            isLiquidGlassEnabled = true,
+                            isLiquidGlassEnabled = isLiquidGlassEnabled || shouldForceDragLiquidGlassIndicator,
                             indicatorWidthMultiplier = 1f,
                             indicatorMinWidth = md3IndicatorWidth,
                             indicatorMaxWidth = md3IndicatorWidth,
@@ -1061,6 +1075,7 @@ private fun LightweightHomeTopTabs(
                             indicatorHeight = 4.dp,
                             lensAmountScale = 0.35f,
                             lensHeightScale = 0.35f,
+                            forceChromaticAberration = topTabDragActive,
                             liquidGlassStyle = liquidGlassStyle,
                             liquidGlassTuning = liquidGlassTuning,
                             backdrop = backdrop,
@@ -1303,7 +1318,8 @@ fun CategoryTabRow(
     skinPlainStyle: Boolean = false,
     skinPlainContentColor: Color? = null,
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
-    partitionSkinIconPath: String? = null
+    partitionSkinIconPath: String? = null,
+    onIndicatorClearanceChanged: (Dp) -> Unit = {}
 ) {
     val presetStyle = resolveHomeTopPresetStyle(
         uiPreset = LocalUiPreset.current,
@@ -1313,6 +1329,7 @@ fun CategoryTabRow(
     val showPartitionAction = false
     val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()
     if (showPartitionAction && !hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX) {
+        SideEffect { onIndicatorClearanceChanged(0.dp) }
         val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
         val scrollChannel = com.android.purebilibili.feature.home.LocalHomeScrollChannel.current
         MiuixCategoryTabRow(
@@ -1345,7 +1362,8 @@ fun CategoryTabRow(
         backdrop = backdrop,
         topTabSkinIconPaths = topTabSkinIconPaths,
         partitionSkinIconPath = partitionSkinIconPath,
-        showPartitionAction = showPartitionAction
+        showPartitionAction = showPartitionAction,
+        onIndicatorClearanceChanged = onIndicatorClearanceChanged
     )
 }
 
@@ -1477,6 +1495,17 @@ private fun rememberTopTabPagerDragHeld(
     if (pagerState == null) return false
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
     return isDragged
+}
+
+internal fun resolveTopTabIndicatorAvoidancePaddingDp(
+    rowHeightDp: Float,
+    scaleY: Float,
+    isDragging: Boolean
+): Float {
+    if (!isDragging || rowHeightDp <= 0f) return 0f
+    val indicatorHeightDp = (rowHeightDp - 8f).coerceAtLeast(2f)
+    val extraHalfHeightDp = (indicatorHeightDp * scaleY.coerceAtLeast(1f) - indicatorHeightDp) / 2f
+    return (extraHalfHeightDp + 4f).coerceIn(0f, 24f)
 }
 
 internal fun resolveTopTabIndicatorHitLeftPx(
