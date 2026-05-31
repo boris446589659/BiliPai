@@ -115,6 +115,10 @@ class HomeChromeLiquidSurfaceStructureTest {
             "top tab chrome should not clip enlarged child indicators to the tab shell",
             topTabChrome.readText().contains(".clip(tabShape)")
         )
+        assertTrue(
+            "top tab chrome should center the fixed-height tab row inside the taller shell",
+            topTabChrome.readText().contains("contentAlignment = Alignment.Center")
+        )
         assertFalse(
             "top tab dock should not switch sampling off during feed scroll",
             topBarSource.contains("shouldSampleTopTabDockBackdrop(")

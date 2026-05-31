@@ -209,7 +209,12 @@ internal fun HomeTopTabChrome(
                     )
                 }
             }
-            content()
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                content()
+            }
         }
 
         if (showCollapsedHandle) {

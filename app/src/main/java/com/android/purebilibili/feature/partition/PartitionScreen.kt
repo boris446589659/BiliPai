@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -156,6 +157,11 @@ private val PartitionSideRailItemHeight = 48.dp
 private val PartitionSideRailItemSpacing = 4.dp
 private val PartitionVideoListMaxPush = 20.dp
 
+internal data class PartitionSideRailIndicatorHorizontalPadding(
+    val start: androidx.compose.ui.unit.Dp,
+    val end: androidx.compose.ui.unit.Dp
+)
+
 internal fun resolvePartitionSideRailLabelMode(requestedLabelMode: Int): Int =
     normalizeTopTabLabelMode(requestedLabelMode)
 
@@ -164,6 +170,16 @@ internal fun shouldShowPartitionSideRailIcon(labelMode: Int): Boolean =
 
 internal fun shouldShowPartitionSideRailText(labelMode: Int): Boolean =
     shouldShowTopTabText(resolvePartitionSideRailLabelMode(labelMode))
+
+internal fun resolvePartitionSideRailIndicatorHorizontalPadding(
+    contentPadding: PaddingValues,
+    layoutDirection: LayoutDirection
+): PartitionSideRailIndicatorHorizontalPadding {
+    return PartitionSideRailIndicatorHorizontalPadding(
+        start = contentPadding.calculateStartPadding(layoutDirection),
+        end = contentPadding.calculateEndPadding(layoutDirection)
+    )
+}
 
 data class PartitionFeedUiState(
     val selectedPartition: PartitionCategory = partitionTabs.first(),
@@ -433,6 +449,10 @@ private fun PartitionSideRail(
         val itemHeightPx = with(density) { PartitionSideRailItemHeight.toPx() }
         val itemSlotHeightPx = with(density) { (PartitionSideRailItemHeight + PartitionSideRailItemSpacing).toPx() }
         val contentTopPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
+        val indicatorHorizontalPadding = resolvePartitionSideRailIndicatorHorizontalPadding(
+            contentPadding = contentPadding,
+            layoutDirection = LocalLayoutDirection.current
+        )
         val maxVideoPushPx = with(density) { PartitionVideoListMaxPush.toPx() }
         val currentIndicatorOffsetPxProvider = {
             resolvePartitionSideRailIndicatorOffsetPx(
@@ -452,6 +472,7 @@ private fun PartitionSideRail(
             liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled,
             backdrop = railBackdrop,
             maxVideoPushPx = maxVideoPushPx,
+            horizontalPadding = indicatorHorizontalPadding,
             onVideoListPushChanged = onVideoListPushChanged
         )
 
@@ -498,6 +519,7 @@ private fun PartitionSideRailMovingIndicator(
     liquidGlassIndicatorEnabled: Boolean,
     backdrop: com.kyant.backdrop.Backdrop,
     maxVideoPushPx: Float,
+    horizontalPadding: PartitionSideRailIndicatorHorizontalPadding,
     onVideoListPushChanged: (Float) -> Unit
 ) {
     val shape = resolveSharedBottomBarCapsuleShape()
@@ -554,6 +576,7 @@ private fun PartitionSideRailMovingIndicator(
                 )
             }
             .fillMaxWidth()
+            .padding(start = horizontalPadding.start, end = horizontalPadding.end)
             .height(PartitionSideRailItemHeight),
         shape = shape,
         liquidGlassEnabled = liquidGlassIndicatorEnabled,

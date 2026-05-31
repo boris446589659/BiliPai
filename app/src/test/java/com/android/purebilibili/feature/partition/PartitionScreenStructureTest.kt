@@ -1,5 +1,8 @@
 package com.android.purebilibili.feature.partition
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import java.io.File
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -74,6 +77,23 @@ class PartitionScreenStructureTest {
                 itemSlotHeightPx = 52f
             ) == 108f
         )
+    }
+
+    @Test
+    fun `side rail indicator uses the same horizontal padding as items`() {
+        val ltrPadding = resolvePartitionSideRailIndicatorHorizontalPadding(
+            contentPadding = PaddingValues(start = 16.dp, end = 4.dp),
+            layoutDirection = LayoutDirection.Ltr
+        )
+        val rtlPadding = resolvePartitionSideRailIndicatorHorizontalPadding(
+            contentPadding = PaddingValues(start = 16.dp, end = 4.dp),
+            layoutDirection = LayoutDirection.Rtl
+        )
+
+        assertTrue(ltrPadding.start == 16.dp)
+        assertTrue(ltrPadding.end == 4.dp)
+        assertTrue(rtlPadding.start == 16.dp)
+        assertTrue(rtlPadding.end == 4.dp)
     }
 
     @Test
