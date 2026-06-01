@@ -1119,6 +1119,25 @@ internal fun Modifier.kernelSuMiuixFloatingDockSurface(
         blurEnabled = blurEnabled,
         hasHazeState = hazeState != null
     )
+    val innerRimGlowProvider: () -> MiuixInnerShadow? = remember(
+        materialSpec.innerRimGlow,
+        isDarkTheme,
+        glassEnabled
+    ) {
+        val innerRimGlow = materialSpec.innerRimGlow
+        if (glassEnabled && innerRimGlow != null) {
+            val cached = MiuixInnerShadow(
+                radius = innerRimGlow.radiusDp.dp,
+                alpha = innerRimGlow.alpha,
+                color = if (isDarkTheme) Color.White else Color.Black
+            )
+            val provider: () -> MiuixInnerShadow? = { cached }
+            provider
+        } else {
+            val provider: () -> MiuixInnerShadow? = { null }
+            provider
+        }
+    }
     val baseHighlight = rememberGravityRotatedHighlight(iosIndicatorSpecular, extraDegrees = -45f)
 
     this
@@ -1189,6 +1208,7 @@ internal fun Modifier.kernelSuMiuixFloatingDockSurface(
                             }
                         }
                     )
+                    .miuixInnerShadow(shape = shape, shadow = innerRimGlowProvider)
             } else {
                 background(containerColor, shape)
             }
