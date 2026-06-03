@@ -1393,7 +1393,7 @@ internal fun Modifier.homeTopChromeSurface(
             1f
         },
         useTuningSurfaceAlpha = isLiquidGlassMode,
-        hazeBackgroundAlphaMultiplier = if (isLiquidGlassMode) 0.4f else 1f
+        hazeBackgroundAlphaMultiplier = 1f
     )
     val lensShape = resolveHomeTopChromeLensShape(shape)
     val surfaceTreatment = resolveHomeTopChromeSurfaceTreatment(
@@ -1408,6 +1408,19 @@ internal fun Modifier.homeTopChromeSurface(
         style = style
     )
     val resolvedSurfaceColor = resolveHomeTopChromeSurfaceColor(surfaceColor, backdropSpec, style)
+    // 匹配 KSU drawBackdrop 路径的模糊半径，确保 LIQUID_GLASS_HAZE 视觉强度一致
+    val hazeLiquidBlurRadius = if (isLiquidGlassMode) {
+        resolvedTuning.backdropBlurRadius * (0.08f + resolvedTuning.progress * 0.92f)
+    } else {
+        0f
+    }
+    // 匹配 KSU lens(refractionAmount=24) 的折射强度
+    // AGSL RuntimeShader 天然比 KSU lens() 效果弱，将 refractIntensity 按比例增强
+    val hazeRefractIntensity = if (renderMode == HomeTopChromeRenderMode.LIQUID_GLASS_HAZE) {
+        (resolvedTuning.refractIntensity * 4f).coerceAtMost(1f)
+    } else {
+        resolvedTuning.refractIntensity
+    }
 
     when (renderMode) {
         HomeTopChromeRenderMode.LIQUID_GLASS_BACKDROP -> {
@@ -1477,7 +1490,7 @@ internal fun Modifier.homeTopChromeSurface(
                             state = hazeState,
                             style = HazeStyle(
                                 tint = null,
-                                blurRadius = 0.1.dp,
+                                blurRadius = hazeLiquidBlurRadius.dp,
                                 noiseFactor = 0f
                             )
                         ) {
@@ -1490,22 +1503,27 @@ internal fun Modifier.homeTopChromeSurface(
                             state = hazeState,
                             style = HazeStyle(
                                 tint = null,
-                                blurRadius = 0.1.dp,
+                                blurRadius = hazeLiquidBlurRadius.dp,
                                 noiseFactor = 0f
                             )
                         ) {
                             blurredEdgeTreatment = resolveUnifiedBlurredEdgeTreatment(shape)
                         }
                         .liquidGlassBackground(
-                            refractIntensity = resolvedTuning.refractIntensity,
+                            refractIntensity = hazeRefractIntensity,
                             scrollOffsetProvider = { scrollOffset },
-                            backgroundColor = resolvedSurfaceColor.copy(
-                                alpha = if (style.useTuningSurfaceAlpha) {
-                                    backdropSpec.surfaceAlpha * style.hazeBackgroundAlphaMultiplier
-                                } else {
-                                    surfaceColor.alpha * style.hazeBackgroundAlphaMultiplier
-                                }
-                            )
+                            backgroundColor = if (isLiquidGlassMode && backdropSpec.whiteOverlayAlpha > 0f) {
+                                val wa = backdropSpec.whiteOverlayAlpha
+                                // 合成白色叠加层，匹配 drawBackdrop 的 drawRect(resolvedSurfaceColor) + drawRect(Color.White(wa))
+                                Color(
+                                    alpha = resolvedSurfaceColor.alpha + wa * (1f - resolvedSurfaceColor.alpha),
+                                    red = wa + (1f - wa) * resolvedSurfaceColor.red,
+                                    green = wa + (1f - wa) * resolvedSurfaceColor.green,
+                                    blue = wa + (1f - wa) * resolvedSurfaceColor.blue
+                                )
+                            } else {
+                                resolvedSurfaceColor
+                            }
                         )
                 }
             } else {
@@ -1866,9 +1884,21 @@ fun iOSHomeHeader(
         useUnifiedPanel = useUnifiedTopPanel,
         androidNativeVariant = androidNativeVariant
     )
+    //  [Search Chrome Render] 搜索胶囊渲染策略 — 对照顶部 dock 栏区域
+    //  原有路径：
+    //    LIQUID_GLASS → useBottomBarMatchedTopControls → homeTopBottomBarMatchedSurface
+    //    → kernelSuFloatingDockSurface → drawBackdrop（静态截图，不实时）
+    //  改为始终通过 homeTopChromeSurface（与顶栏其他元素一致）：
+    //    LIQUID_GLASS + hazeState → LIQUID_GLASS_HAZE → hazeEffect（实时捕获）
+    //    LIQUID_GLASS + !hazeState → LIQUID_GLASS_BACKDROP → drawBackdrop（兼容兜底）
     val useBottomBarMatchedTopControls =
         searchChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_BACKDROP ||
             searchChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_HAZE
+    val searchHazeLiquidEnabled = useBottomBarMatchedTopControls && hazeState != null
+    val searchChromeRenderModeEffective = when {
+        searchHazeLiquidEnabled -> HomeTopChromeRenderMode.LIQUID_GLASS_HAZE
+        else -> searchChromeRenderMode
+    }
     val searchContentBackdrop = rememberLayerBackdrop()
     val localTopChromeRenderMode = resolveHomeTopLocalChromeRenderMode(
         renderMode = topChromeRenderMode,
@@ -2585,26 +2615,8 @@ fun iOSHomeHeader(
                                         .onSizeChanged { searchPillWidthPx = it.width.toFloat() }
                                         .clip(searchContainerShape)
                                         .then(
-                                            if (useBottomBarMatchedTopControls) {
-                                                Modifier.homeTopBottomBarMatchedSurface(
-                                                    renderMode = searchChromeRenderMode,
-                                                    shape = searchContainerShape,
-                                                    hazeState = hazeState,
-                                                    backdrop = backdrop,
-                                                    liquidGlassStyle = liquidStyle,
-                                                    liquidGlassTuning = liquidGlassTuning,
-                                                    liquidGlassPreset = bottomBarLiquidGlassPreset,
-                                                    motionTier = motionTier,
-                                                    isTransitionRunning = topChromeMotionPolicy.isTransitionRunning,
-                                                    forceLowBlurBudget = forceLowBlurBudget,
-                                                    drawShellLens = searchRefractionLayerPolicy.drawShellLens,
-                                                    isScrolling = topChromeMotionPolicy.isScrolling,
-                                                    materialScrollProgress =
-                                                        searchRefractionLayerPolicy.materialScrollProgress
-                                                )
-                                            } else {
-                                                Modifier.homeTopChromeSurface(
-                                                    renderMode = searchChromeRenderMode,
+                                            Modifier.homeTopChromeSurface(
+                                                renderMode = searchChromeRenderModeEffective,
                                                     shape = searchContainerShape,
                                                     surfaceColor = skinSearchSurfaceColor,
                                                     hazeState = hazeState,
@@ -2622,19 +2634,16 @@ fun iOSHomeHeader(
                                                         isLightMode = isLightMode
                                                     )
                                                 )
-                                            }
                                         )
                                         .border(
                                             width = 0.8.dp,
-                                            color = if (useUnifiedTopPanel) {
-                                                if (useBottomBarMatchedTopControls) {
-                                                    Color.Transparent
-                                                } else {
-                                                    resolveHomeTopUnifiedSearchBorderColor(
-                                                        isLightMode = isLightMode,
-                                                        renderMode = searchChromeRenderMode
-                                                    )
-                                                }
+                                            color = if (useBottomBarMatchedTopControls) {
+                                                Color.Transparent
+                                            } else if (useUnifiedTopPanel) {
+                                                resolveHomeTopUnifiedSearchBorderColor(
+                                                    isLightMode = isLightMode,
+                                                    renderMode = searchChromeRenderMode
+                                                )
                                             } else {
                                                 searchPillColors.borderColor
                                             },

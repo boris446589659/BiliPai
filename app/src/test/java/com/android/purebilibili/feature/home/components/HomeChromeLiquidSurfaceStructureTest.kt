@@ -67,7 +67,8 @@ class HomeChromeLiquidSurfaceStructureTest {
         )
         assertTrue(
             "home header should draw a bottom-bar matched dock around top tabs inside the unified top panel",
-            topHeaderSource.contains("val topTabDockChromeRenderMode = unifiedLocalTabChromeRenderMode") &&
+            topHeaderSource.contains("val topTabDockChromeRenderMode = if (") &&
+                topHeaderSource.contains("unifiedLocalTabChromeRenderMode == HomeTopChromeRenderMode.PLAIN") &&
                 topHeaderSource.contains("val useTopTabBottomBarMatchedDock =") &&
                 topHeaderSource.contains("effectiveTabMaterialMode == TopTabMaterialMode.LIQUID_GLASS") &&
                 topHeaderSource.contains("topTabDockChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_BACKDROP") &&
@@ -115,9 +116,9 @@ class HomeChromeLiquidSurfaceStructureTest {
             topBarSource.contains("private fun TopTabDockSurface(") ||
                 topBarSource.contains("private fun Md3CategoryTabRow(")
         )
-        assertFalse(
-            "top tab chrome should not clip enlarged child indicators to the tab shell",
-            topTabChrome.readText().contains(".clip(tabShape)")
+        assertTrue(
+            "top tab chrome should guard child indicator clip behind chrome surface gate",
+            topTabChrome.readText().contains("if (drawChromeSurface) Modifier.clip(tabShape) else Modifier")
         )
         assertTrue(
             "top tab chrome should center the fixed-height tab row inside the taller shell",
