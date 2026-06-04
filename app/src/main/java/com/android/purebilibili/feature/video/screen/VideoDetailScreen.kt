@@ -3649,9 +3649,6 @@ fun VideoDetailScreen(
                                                         onUpClick = navigateToUserSpaceFromVideo,
                                                         onRelatedVideoClick = navigateToRelatedVideo,
                                                         onSubReplyClick = { commentViewModel.openSubReply(it) },
-                                                        onRootCommentClick = {
-                                                            viewModel.openRootCommentComposer()
-                                                        },
                                                         onCommentReplyClick = { replyItem ->
                                                             viewModel.setReplyingTo(replyItem)
                                                             viewModel.showCommentInputDialog()

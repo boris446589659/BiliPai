@@ -149,4 +149,23 @@ class VideoDetailScreenPolicyTest {
             )
         )
     }
+
+    @Test
+    fun videoCommentTab_removesInlineComposerAndKeepsBottomComposerEntry() {
+        val contentSource = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoContentSection.kt")
+            .readText()
+        val detailSource = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+            .readText()
+        val commentTabSource = contentSource
+            .substringAfter("private fun VideoCommentTab(")
+            .substringBefore("private fun VideoCommentBackToTopButton(")
+        val bottomInputBarSource = detailSource
+            .substringAfter("BottomInputBar(")
+            .substringBefore("if (shouldShowExternalPlaylistQueueBar)")
+
+        assertFalse(commentTabSource.contains("说点什么，直接评论 UP 主和大家"))
+        assertFalse(commentTabSource.contains("onRootCommentClick"))
+        assertTrue(bottomInputBarSource.contains("onCommentClick = {"))
+        assertTrue(bottomInputBarSource.contains("viewModel.openRootCommentComposer()"))
+    }
 }
