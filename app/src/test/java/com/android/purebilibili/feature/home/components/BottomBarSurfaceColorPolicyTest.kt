@@ -442,7 +442,7 @@ class BottomBarSurfaceColorPolicyTest {
     }
 
     @Test
-    fun `android native idle glass indicator uses gray white capsule in light mode`() {
+    fun `android native idle glass indicator uses ksu low alpha neutral overlay in light mode`() {
         val themeIndicator = resolveAndroidNativeIndicatorColor(
             themeColor = Color(0xFF00A1D6),
             darkTheme = false
@@ -451,10 +451,10 @@ class BottomBarSurfaceColorPolicyTest {
             darkTheme = false
         )
 
-        assertTrue(idleIndicator.red in 0.80f..0.90f)
-        assertTrue(idleIndicator.green in 0.80f..0.90f)
-        assertTrue(idleIndicator.blue in 0.82f..0.92f)
-        assertTrue(idleIndicator.alpha > 0.65f)
+        assertEquals(Color.Black.red, idleIndicator.red, 0.001f)
+        assertEquals(Color.Black.green, idleIndicator.green, 0.001f)
+        assertEquals(Color.Black.blue, idleIndicator.blue, 0.001f)
+        assertEquals(0.1f, idleIndicator.alpha, 0.003f)
         assertFalse(
             idleIndicator.red == themeIndicator.red &&
                 idleIndicator.green == themeIndicator.green &&
@@ -482,7 +482,7 @@ class BottomBarSurfaceColorPolicyTest {
     }
 
     @Test
-    fun `ios26 idle glass indicator uses gray white capsule in light mode`() {
+    fun `ios26 idle glass indicator keeps ksu low alpha overlay in light mode`() {
         val tunedLight = resolveBottomBarIdleIndicatorSurfaceColor(
             preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
             darkTheme = false
@@ -492,9 +492,10 @@ class BottomBarSurfaceColorPolicyTest {
             darkTheme = false
         )
 
-        assertTrue(tunedLight.red in 0.80f..0.90f)
-        assertTrue(ios26Light.red in 0.80f..0.90f)
-        assertTrue(ios26Light.alpha > tunedLight.alpha)
+        assertEquals(tunedLight.red, ios26Light.red, 0.001f)
+        assertEquals(tunedLight.green, ios26Light.green, 0.001f)
+        assertEquals(tunedLight.blue, ios26Light.blue, 0.001f)
+        assertEquals(tunedLight.alpha, ios26Light.alpha, 0.001f)
     }
 
     @Test

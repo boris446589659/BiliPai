@@ -105,7 +105,6 @@ import com.android.purebilibili.core.util.HapticType
 import com.android.purebilibili.core.util.rememberHapticFeedback
 import com.android.purebilibili.core.theme.iOSSystemGray
 import com.android.purebilibili.core.theme.iOSSystemGray3
-import com.android.purebilibili.core.theme.iOSSystemGray4
 import com.android.purebilibili.core.theme.iOSSystemGray6
 import com.android.purebilibili.core.theme.iOSRed
 import com.android.purebilibili.core.theme.BottomBarColors  // 统一底栏颜色配置
@@ -1327,7 +1326,7 @@ internal fun resolveAndroidNativeIdleIndicatorSurfaceColor(
     return if (darkTheme) {
         Color.White.copy(alpha = 0.1f)
     } else {
-        iOSSystemGray4.copy(alpha = 0.72f)
+        Color.Black.copy(alpha = 0.1f)
     }
 }
 
@@ -1341,7 +1340,7 @@ internal fun resolveBottomBarIdleIndicatorSurfaceColor(
         BottomBarLiquidGlassPreset.IOS26_REFINED -> if (darkTheme) {
             iOSSystemGray6.copy(alpha = 0.28f)
         } else {
-            iOSSystemGray4.copy(alpha = 0.78f)
+            Color.Black.copy(alpha = 0.1f)
         }
     }
 }
