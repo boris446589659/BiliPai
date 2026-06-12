@@ -655,17 +655,18 @@ fun CommonListScreen(
                                     playFavoriteVideo(folderUiState.items, bvid, cid, coverUrl)
                                 },
                                 onCollectionClick = onCollectionClick,
-                            onLoadMore = { favoriteVm.loadMoreForFolder(page) },
-                            onUnfavorite = if (folderUiState.canRemoveItems) {
-                                { video -> favoriteVm.removeVideo(video) }
-                            } else {
-                                null
-                            },
-                            gridState = favoritePagerGridStates.getOrPut(page) {
-                                androidx.compose.foundation.lazy.grid.LazyGridState()
-                            }
-                        )
-                    }
+                                onRetry = { favoriteVm.retryFolder(page) },
+                                onLoadMore = { favoriteVm.loadMoreForFolder(page) },
+                                onUnfavorite = if (folderUiState.canRemoveItems) {
+                                    { video -> favoriteVm.removeVideo(video) }
+                                } else {
+                                    null
+                                },
+                                gridState = favoritePagerGridStates.getOrPut(page) {
+                                    androidx.compose.foundation.lazy.grid.LazyGridState()
+                                }
+                            )
+                        }
                     }
 
                     FavoriteContentMode.SINGLE_FOLDER -> {
@@ -691,6 +692,7 @@ fun CommonListScreen(
                                 playFavoriteVideo(folderUiState.items, bvid, cid, coverUrl)
                             },
                             onCollectionClick = onCollectionClick,
+                            onRetry = { favoriteVm.retryFolder(0) },
                             onLoadMore = { favoriteVm.loadMoreForFolder(0) },
                             onUnfavorite = if (folderUiState.canRemoveItems) {
                                 { video -> favoriteVm.removeVideo(video) }
@@ -722,6 +724,9 @@ fun CommonListScreen(
                             }
                         },
                         onCollectionClick = onCollectionClick,
+                        onRetry = favoriteViewModel?.let { favoriteVm ->
+                            { favoriteVm.loadData() }
+                        },
                         onLoadMore = {
                             when (loadMoreOwner) {
                                 CommonListLoadMoreOwner.FAVORITE -> favoriteViewModel?.loadMore()
@@ -1244,6 +1249,7 @@ private fun CommonListContent(
     videoCardAppearance: CommonListVideoCardAppearance,
     onVideoClick: (String, Long, String) -> Unit,
     onCollectionClick: ((FavoriteCollectionRoute) -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
     onLoadMore: () -> Unit,
     onUnfavorite: ((com.android.purebilibili.data.model.response.VideoItem) -> Unit)?,
     historyDeleteSession: HistoryDeleteSession? = null,
@@ -1283,8 +1289,22 @@ private fun CommonListContent(
             items(columns * 4, key = { it }) { VideoGridItemSkeleton() }
         }
     } else if (error != null && items.isEmpty()) {
-        Box(viewportModifier, contentAlignment = Alignment.Center) {
-            Text(text = error, color = Color.Gray)
+        Column(
+            modifier = viewportModifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (onRetry != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(onClick = onRetry) {
+                    Text("重试")
+                }
+            }
         }
     } else if (items.isEmpty()) {
         Box(modifier = viewportModifier, contentAlignment = Alignment.Center) {

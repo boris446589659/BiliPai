@@ -5,9 +5,13 @@ import com.android.purebilibili.data.model.response.FavFolderSource
 import com.android.purebilibili.data.model.response.Owner
 import com.android.purebilibili.data.model.response.Upper
 import com.android.purebilibili.data.model.response.VideoItem
+import com.android.purebilibili.data.repository.FavoriteRequestException
+import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.test.runTest
 
 class FavoriteFolderAggregationPolicyTest {
 
@@ -152,5 +156,149 @@ class FavoriteFolderAggregationPolicyTest {
         )
 
         assertEquals(listOf("Wallpaper Engine 壁纸推荐"), result.map { it.title })
+    }
+
+    @Test
+    fun `resolveFavoriteFolderLoadState preserves cached items when request fails`() {
+        val cachedItem = VideoItem(id = 1L, title = "已加载视频")
+
+        val state = resolveFavoriteFolderLoadState(
+            previousState = ListUiState(items = listOf(cachedItem), isLoading = true),
+            title = "默认收藏夹",
+            canRemoveItems = true,
+            result = Result.failure(IllegalStateException("请求过于频繁"))
+        )
+
+        assertEquals(listOf(cachedItem), state.items)
+        assertEquals("请求过于频繁", state.error)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `resolveFavoriteFolderItems rejects missing resources for non empty folder`() {
+        val result = resolveFavoriteFolderItems(
+            expectedItemCount = 3,
+            resources = null
+        )
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `resolveFavoriteFolderItems accepts a genuinely empty folder`() {
+        val result = resolveFavoriteFolderItems(
+            expectedItemCount = 0,
+            resources = null
+        )
+
+        assertEquals(emptyList(), result.getOrThrow())
+    }
+
+    @Test
+    fun `requestFavoriteFolderWithRetry retries one network failure`() = runTest {
+        var attempts = 0
+
+        val result = requestFavoriteFolderWithRetry(
+            retryDelayMillis = 0L,
+            delayAction = {}
+        ) {
+            attempts++
+            if (attempts == 1) {
+                Result.failure(IOException("连接重置"))
+            } else {
+                Result.success("已恢复")
+            }
+        }
+
+        assertEquals("已恢复", result.getOrThrow())
+        assertEquals(2, attempts)
+    }
+
+    @Test
+    fun `requestFavoriteFolderWithRetry does not retry 412 or 429`() = runTest {
+        val riskCodes = listOf(412, 429)
+
+        riskCodes.forEach { code ->
+            var attempts = 0
+            val result = requestFavoriteFolderWithRetry(
+                retryDelayMillis = 0L,
+                delayAction = {}
+            ) {
+                attempts++
+                Result.failure<String>(
+                    FavoriteRequestException(
+                        httpCode = code,
+                        message = "HTTP $code"
+                    )
+                )
+            }
+
+            assertTrue(result.isFailure)
+            assertEquals(1, attempts)
+            assertEquals(
+                "请求被风控，请稍后重试",
+                resolveFavoriteErrorMessage(result.exceptionOrNull()!!)
+            )
+        }
+    }
+
+    @Test
+    fun `requestFavoriteFolderWithRetry retries one 5xx failure`() = runTest {
+        var attempts = 0
+
+        val result = requestFavoriteFolderWithRetry(
+            retryDelayMillis = 0L,
+            delayAction = {}
+        ) {
+            attempts++
+            if (attempts == 1) {
+                Result.failure(
+                    FavoriteRequestException(
+                        httpCode = 503,
+                        message = "HTTP 503"
+                    )
+                )
+            } else {
+                Result.success("已恢复")
+            }
+        }
+
+        assertEquals("已恢复", result.getOrThrow())
+        assertEquals(2, attempts)
+    }
+
+    @Test
+    fun `resolveFavoriteFolderLoadState shows friendly risk control error and keeps cache`() {
+        val cachedItem = VideoItem(id = 1L, title = "缓存视频")
+
+        val state = resolveFavoriteFolderLoadState(
+            previousState = ListUiState(items = listOf(cachedItem), isLoading = true),
+            title = "默认收藏夹",
+            canRemoveItems = true,
+            result = Result.failure(
+                FavoriteRequestException(
+                    apiCode = -412,
+                    message = "请求被拦截"
+                )
+            )
+        )
+
+        assertEquals(listOf(cachedItem), state.items)
+        assertEquals("请求被风控，请稍后重试", state.error)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `shouldApplyFavoriteFolderResult rejects stale order response`() {
+        assertFalse(
+            shouldApplyFavoriteFolderResult(
+                requestGeneration = 3L,
+                currentGeneration = 3L,
+                requestedMediaId = 10L,
+                currentMediaId = 10L,
+                requestedOrder = "mtime",
+                currentOrder = "view"
+            )
+        )
     }
 }

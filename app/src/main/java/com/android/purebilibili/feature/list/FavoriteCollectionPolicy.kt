@@ -2,7 +2,12 @@ package com.android.purebilibili.feature.list
 
 import com.android.purebilibili.data.model.response.FavFolder
 import com.android.purebilibili.data.model.response.FavFolderSource
+import com.android.purebilibili.data.model.response.FavoriteData
 import com.android.purebilibili.data.model.response.VideoItem
+import com.android.purebilibili.data.repository.FavoriteRequestException
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 
 data class FavoriteCollectionRoute(
     val type: String,
@@ -85,4 +90,112 @@ internal fun resolveFavoriteCollectionRoute(item: VideoItem): FavoriteCollection
         title = item.title,
         ownerName = item.owner.name
     )
+}
+
+internal fun resolveFavoriteFolderLoadState(
+    previousState: ListUiState,
+    title: String,
+    canRemoveItems: Boolean,
+    result: Result<List<VideoItem>>
+): ListUiState {
+    return result.fold(
+        onSuccess = { items ->
+            previousState.copy(
+                title = title,
+                items = items,
+                isLoading = false,
+                error = null,
+                canRemoveItems = canRemoveItems
+            )
+        },
+        onFailure = { throwable ->
+            previousState.copy(
+                title = title,
+                isLoading = false,
+                error = resolveFavoriteErrorMessage(throwable),
+                canRemoveItems = canRemoveItems
+            )
+        }
+    )
+}
+
+internal fun resolveFavoriteFolderItems(
+    expectedItemCount: Int,
+    resources: List<FavoriteData>?
+): Result<List<VideoItem>> {
+    if (resources == null && expectedItemCount > 0) {
+        return Result.failure(IllegalStateException("收藏夹内容响应不完整，请稍后重试"))
+    }
+    return Result.success(resources.orEmpty().map { it.toVideoItem() })
+}
+
+internal suspend fun <T> requestFavoriteFolderWithRetry(
+    maxAttempts: Int = 2,
+    retryDelayMillis: Long = 400L,
+    delayAction: suspend (Long) -> Unit = { delay(it) },
+    request: suspend () -> Result<T>
+): Result<T> {
+    require(maxAttempts > 0)
+    var lastFailure: Throwable = IllegalStateException("收藏夹请求未执行")
+    repeat(maxAttempts) { attempt ->
+        val result = runCatching { request() }
+            .fold(
+                onSuccess = { it },
+                onFailure = { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    Result.failure(throwable)
+                }
+            )
+        result.exceptionOrNull()?.let { throwable ->
+            if (throwable is CancellationException) throw throwable
+        }
+        if (result.isSuccess) return result
+        lastFailure = result.exceptionOrNull() ?: lastFailure
+        if (attempt < maxAttempts - 1 && shouldRetryFavoriteFolderRequest(lastFailure)) {
+            delayAction(retryDelayMillis)
+        } else {
+            return Result.failure(lastFailure)
+        }
+    }
+    return Result.failure(lastFailure)
+}
+
+internal fun shouldRetryFavoriteFolderRequest(throwable: Throwable): Boolean {
+    if (throwable is CancellationException) throw throwable
+    if (isFavoriteRiskControlError(throwable)) return false
+    return when (throwable) {
+        is FavoriteRequestException -> throwable.httpCode in 500..599
+        is IOException -> true
+        else -> throwable.cause?.let(::shouldRetryFavoriteFolderRequest) ?: false
+    }
+}
+
+internal fun resolveFavoriteErrorMessage(throwable: Throwable): String {
+    if (isFavoriteRiskControlError(throwable)) {
+        return "请求被风控，请稍后重试"
+    }
+    return throwable.message?.takeIf(String::isNotBlank)
+        ?: "加载收藏夹失败，请稍后重试"
+}
+
+private fun isFavoriteRiskControlError(throwable: Throwable): Boolean {
+    val requestError = throwable as? FavoriteRequestException
+    if (requestError?.apiCode in setOf(-412, 412, -429, 429)) return true
+    if (requestError?.httpCode in setOf(412, 429)) return true
+    val message = throwable.message.orEmpty()
+    return message.contains("HTTP 412", ignoreCase = true) ||
+        message.contains("HTTP 429", ignoreCase = true)
+}
+
+internal fun shouldApplyFavoriteFolderResult(
+    requestGeneration: Long,
+    currentGeneration: Long,
+    requestedMediaId: Long,
+    currentMediaId: Long?,
+    requestedOrder: String,
+    currentOrder: String
+): Boolean {
+    return requestGeneration == currentGeneration &&
+        requestedMediaId == currentMediaId &&
+        requestedOrder == currentOrder
 }

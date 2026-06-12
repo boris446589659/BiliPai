@@ -254,7 +254,8 @@ interface BilibiliApi {
     suspend fun getFavFolders(
         @Query("up_mid") mid: Long,
         @Query("type") type: Int? = null,
-        @Query("rid") rid: Long? = null
+        @Query("rid") rid: Long? = null,
+        @Query("web_location") webLocation: String = "333.1387"
     ): FavFolderResponse
 
     @GET("x/v3/fav/folder/collected/list")
@@ -2169,12 +2170,27 @@ object NetworkModule {
                     referer = "https://t.bilibili.com/"
                 }
 
+                val isFavoriteEndpoint = url.encodedPath.contains("/x/v3/fav/") ||
+                    url.encodedPath.contains("/x/space/fav/")
+                if (isFavoriteEndpoint) {
+                    val favoriteMid = url.queryParameter("up_mid")
+                        ?: TokenManager.midCache?.takeIf { it > 0L }?.toString()
+                    referer = if (favoriteMid.isNullOrEmpty()) {
+                        "https://space.bilibili.com/"
+                    } else {
+                        "https://space.bilibili.com/$favoriteMid/favlist"
+                    }
+                }
+
                 var origin = "https://www.bilibili.com"
                 if (url.host == "api.live.bilibili.com") {
                     origin = "https://live.bilibili.com"
                 }
                 if (isDynamicEndpoint) {
                     origin = "https://t.bilibili.com"
+                }
+                if (isFavoriteEndpoint) {
+                    origin = "https://space.bilibili.com"
                 }
 
                 val builder = original.newBuilder()

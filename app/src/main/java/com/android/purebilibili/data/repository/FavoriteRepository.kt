@@ -2,8 +2,40 @@ package com.android.purebilibili.data.repository
 
 import com.android.purebilibili.core.network.NetworkModule
 import com.android.purebilibili.data.model.response.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+
+internal class FavoriteRequestException(
+    val apiCode: Int? = null,
+    val httpCode: Int? = null,
+    message: String,
+    cause: Throwable? = null
+) : Exception(message, cause)
+
+private fun favoriteApiFailure(
+    operation: String,
+    code: Int,
+    message: String
+): FavoriteRequestException {
+    val detail = message.ifBlank { "未知错误" }
+    return FavoriteRequestException(
+        apiCode = code,
+        message = "$operation: $code $detail"
+    )
+}
+
+private fun favoriteHttpFailure(
+    operation: String,
+    exception: HttpException
+): FavoriteRequestException {
+    return FavoriteRequestException(
+        httpCode = exception.code(),
+        message = "$operation: HTTP ${exception.code()}",
+        cause = exception
+    )
+}
 
 object FavoriteRepository {
     private val api = NetworkModule.api
@@ -24,8 +56,18 @@ object FavoriteRepository {
                             ?: emptyList()
                     )
                 } else {
-                    Result.failure(Exception("获取收藏夹失败: ${response.code}"))
+                    Result.failure(
+                        favoriteApiFailure(
+                            operation = "获取收藏夹失败",
+                            code = response.code,
+                            message = response.message
+                        )
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpException) {
+                Result.failure(favoriteHttpFailure("获取收藏夹失败", e))
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -51,8 +93,18 @@ object FavoriteRepository {
                         )
                     )
                 } else {
-                    Result.failure(Exception("获取收藏合集失败: ${response.code}"))
+                    Result.failure(
+                        favoriteApiFailure(
+                            operation = "获取收藏合集失败",
+                            code = response.code,
+                            message = response.message
+                        )
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpException) {
+                Result.failure(favoriteHttpFailure("获取收藏合集失败", e))
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -79,8 +131,18 @@ object FavoriteRepository {
                 if (response.code == 0 && response.data != null) {
                     Result.success(response.data)
                 } else {
-                    Result.failure(Exception(response.message))
+                    Result.failure(
+                        favoriteApiFailure(
+                            operation = "获取收藏夹内容失败",
+                            code = response.code,
+                            message = response.message
+                        )
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpException) {
+                Result.failure(favoriteHttpFailure("获取收藏夹内容失败", e))
             } catch (e: Exception) {
                 Result.failure(e)
             }
