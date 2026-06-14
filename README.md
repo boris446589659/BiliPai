@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.2.1-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.2.1" />
+  <img src="https://img.shields.io/badge/Version-9.2.2-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.2.2" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -182,11 +182,10 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.2.1 / versionCode 226`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.2.1`：
+当前仓库版本号已更新到 `9.2.2 / versionCode 227`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.2.2`：
 
-- 新增“我的点赞”和首页不感兴趣原因反馈，优化“我的”页面渐进加载。
-- 应用内小窗支持拖拽缩放、返回首页自动续播，并可切换到系统画中画。
-- 修复收藏夹偶发空白，优化追更合集封面列表，并补齐合集入口及合集内视频卡片共享元素动画。
+- 修复全屏手势或插件跳转进度后，进度条停留旧位置、再次拖动回跳的问题。
+- 修复快进、快退或跳过片段后弹幕概率消失的问题。
 
 ## 路线图
 

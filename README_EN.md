@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-06-13 · Synced to v9.2.1 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-06-14 · Synced to v9.2.2 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-9.2.1-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-9.2.2-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -436,12 +436,10 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v9.2.1 · 2026-06-13)
+### Latest (v9.2.2 · 2026-06-14)
 
-- Added My Likes, recommendation feedback reasons, and progressive loading for the profile page.
-- Added resizable in-app mini-player controls, automatic playback after returning home, and system Picture-in-Picture transitions.
-- Fixed favorite folders intermittently appearing empty, added latest-cover rows for followed collections, and restored shared-element transitions for collection entry and video cards.
-- Fixed double-tap resume after pausing and refined seek gesture sensitivity.
+- Fixed fullscreen gesture or plugin seeks leaving the progress bar at the previous position.
+- Fixed danmaku occasionally disappearing after seeking or skipping a segment.
 
 ---
 
