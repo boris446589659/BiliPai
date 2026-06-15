@@ -552,6 +552,13 @@ fun HomeScreen(
     val homeSettings by SettingsManager.getHomeSettings(context).collectAsStateWithLifecycle(initialValue = com.android.purebilibili.core.store.HomeSettings(),
         context = kotlin.coroutines.EmptyCoroutineContext
     )
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = com.android.purebilibili.core.store.HomeFeedCardStyle.OFFICIAL,
+            context = kotlin.coroutines.EmptyCoroutineContext)
+    val homeFeedCardLayout = remember(homeFeedCardStyle) {
+        resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     val uiPreset = LocalUiPreset.current
     val androidNativeVariant = LocalAndroidNativeVariant.current
     val pullRefreshMotionStyle = remember(uiPreset, androidNativeVariant) {
@@ -1573,7 +1580,8 @@ fun HomeScreen(
                                              pulse = skeletonPulse,
                                              wallpaperTintEnabled = homeWallpaperBackdropAppearance.visible,
                                              wallpaperEffectMode = homeSettings.homeWallpaperEffectMode,
-                                             isDataSaverActive = isDataSaverActive
+                                             isDataSaverActive = isDataSaverActive,
+                                             coverAspectRatio = homeFeedCardLayout.coverAspectRatio
                                          )
                                      }
                                  }
@@ -1609,9 +1617,6 @@ fun HomeScreen(
                                      { subCategory: PopularSubCategory -> viewModel.switchPopularSubCategory(subCategory) }
                                  }
 
-                                 val homeFeedCardLayout = remember(homeSettings.homeFeedCardStyle) {
-                                     resolveHomeFeedCardLayout(homeSettings.homeFeedCardStyle)
-                                 }
                                  val homePageContentPadding = PaddingValues(
                                      bottom = homeListBottomPadding,
                                      start = homeFeedCardLayout.outerPaddingDp.dp,
@@ -1658,7 +1663,7 @@ fun HomeScreen(
                                      wallpaperEffectMode = homeSettings.homeWallpaperEffectMode,
                                      showUpBadges = homeSettings.showHomeUpBadges,
                                      homeDurationStyle = homeSettings.homeDurationStyle,
-                                     homeFeedCardStyle = homeSettings.homeFeedCardStyle,
+                                     homeFeedCardStyle = homeFeedCardStyle,
                                      oldContentAnchorBvid = if (shouldShowRecommendOldContentDivider(
                                              currentCategory = category,
                                              refreshNewItemsKey = refreshNewItemsKey,

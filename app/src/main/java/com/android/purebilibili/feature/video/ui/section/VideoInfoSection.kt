@@ -75,6 +75,9 @@ import com.android.purebilibili.feature.video.ui.FollowTextTone
 import com.android.purebilibili.feature.video.ui.resolveVideoFollowVisualPolicy
 import com.android.purebilibili.data.repository.ViewGrpcRepository
 import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard
+import com.android.purebilibili.feature.home.resolveHomeFeedCardLayout
+import com.android.purebilibili.core.store.HomeFeedCardStyle
+import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.feature.video.ui.components.ShimmerContainer
 import com.android.purebilibili.feature.video.ui.components.SkeletonBox
 import kotlinx.coroutines.delay
@@ -1445,11 +1448,18 @@ private fun BgmRecommendVideoCardRow(
     rowIndex: Int,
     onVideoClick: (BgmRecommendVideo) -> Unit
 ) {
+    val context = LocalContext.current
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = HomeFeedCardStyle.OFFICIAL)
+    val cardLayout = remember(homeFeedCardStyle) {
+        resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = cardLayout.outerPaddingDp.dp),
+        horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp)
     ) {
         rowVideos.forEachIndexed { columnIndex, video ->
             ElegantVideoCard(
@@ -1459,6 +1469,8 @@ private fun BgmRecommendVideoCardRow(
                 showPublishTime = true,
                 isDataSaverActive = true,
                 preferLowQualityCover = true,
+                coverAspectRatio = cardLayout.coverAspectRatio,
+                compactMetadata = cardLayout.compactMetadata,
                 modifier = Modifier.weight(1f),
                 onClick = { _, _ ->
                     onVideoClick(video)
@@ -1475,19 +1487,28 @@ private fun BgmRecommendVideoCardRow(
 private fun BgmRecommendVideoSkeletonRow(
     indexBase: Int
 ) {
+    val context = LocalContext.current
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = HomeFeedCardStyle.OFFICIAL)
+    val cardLayout = remember(homeFeedCardStyle) {
+        resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = cardLayout.outerPaddingDp.dp),
+        horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp)
     ) {
         VideoCardSkeleton(
             modifier = Modifier.weight(1f),
-            index = indexBase
+            index = indexBase,
+            coverAspectRatio = cardLayout.coverAspectRatio
         )
         VideoCardSkeleton(
             modifier = Modifier.weight(1f),
-            index = indexBase + 1
+            index = indexBase + 1,
+            coverAspectRatio = cardLayout.coverAspectRatio
         )
     }
 }

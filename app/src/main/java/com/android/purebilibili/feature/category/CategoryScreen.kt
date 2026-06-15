@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.HomeFeedCardStyle
 import com.android.purebilibili.core.ui.AdaptiveScaffold
 import com.android.purebilibili.core.ui.AdaptiveTopAppBar
 import com.android.purebilibili.core.ui.adaptive.resolveDeviceUiProfile
@@ -31,6 +32,7 @@ import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
 import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard
 import com.android.purebilibili.feature.home.components.cards.StoryVideoCard
+import com.android.purebilibili.feature.home.resolveHomeFeedCardLayout
 import com.android.purebilibili.core.util.LocalWindowSizeClass
 import com.android.purebilibili.core.util.responsiveContentWidth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -114,6 +116,12 @@ fun CategoryScreen(
     //  [修复] 读取首页设置，保持显示模式一致
     val homeSettings by SettingsManager.getHomeSettings(context).collectAsStateWithLifecycle(initialValue = HomeSettings()
     )
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = HomeFeedCardStyle.OFFICIAL)
+    val cardLayout = remember(homeFeedCardStyle) {
+        resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     val showOnlineCount by SettingsManager.getShowOnlineCount(context).collectAsStateWithLifecycle(initialValue = false)
     val displayMode = homeSettings.displayMode
     
@@ -201,8 +209,8 @@ fun CategoryScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(gridColumns),
                     state = gridState,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = cardLayout.outerPaddingDp.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxSize()
@@ -231,6 +239,9 @@ fun CategoryScreen(
                                     animationEnabled = homeSettings.cardAnimationEnabled,
                                     motionTier = cardMotionTier,
                                     transitionEnabled = homeSettings.cardTransitionEnabled,
+                                    coverAspectRatio = cardLayout.coverAspectRatio,
+                                    cardHorizontalPadding = cardLayout.storyCardHorizontalPaddingDp.dp,
+                                    compactMetadata = cardLayout.compactMetadata,
                                     showOnlineCount = showOnlineCount,
                                     onClick = { bvid, _ -> onVideoClick(bvid, video.id, video.pic) }
                                 )
@@ -243,6 +254,8 @@ fun CategoryScreen(
                                     animationEnabled = homeSettings.cardAnimationEnabled,
                                     motionTier = cardMotionTier,
                                     transitionEnabled = homeSettings.cardTransitionEnabled,
+                                    coverAspectRatio = cardLayout.coverAspectRatio,
+                                    compactMetadata = cardLayout.compactMetadata,
                                     showOnlineCount = showOnlineCount,
                                     onClick = { bvid, _ -> onVideoClick(bvid, video.id, video.pic) }
                                 )

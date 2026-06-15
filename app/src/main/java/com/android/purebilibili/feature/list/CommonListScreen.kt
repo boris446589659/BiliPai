@@ -18,6 +18,7 @@ import androidx.compose.ui.zIndex // [New]
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned // [New]
 import com.android.purebilibili.core.store.SettingsManager // [New]
+import com.android.purebilibili.core.store.HomeFeedCardStyle
 import com.android.purebilibili.core.ui.blur.BlurStyles // [New]
 import com.android.purebilibili.core.ui.blur.BlurSurfaceType
 import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
@@ -1350,6 +1351,13 @@ private fun CommonListContent(
     isLoadingMoreSearchResults: Boolean = false,
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState? = null
 ) {
+    val context = LocalContext.current
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = HomeFeedCardStyle.OFFICIAL)
+    val cardLayout = remember(homeFeedCardStyle) {
+        com.android.purebilibili.feature.home.resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     val resolvedGridState = gridState ?: rememberLazyGridState()
     val viewportModifier = Modifier
         .fillMaxSize()
@@ -1367,7 +1375,7 @@ private fun CommonListContent(
             verticalArrangement = Arrangement.spacedBy(spacing),
             modifier = viewportModifier
         ) {
-            items(columns * 4, key = { it }) { VideoGridItemSkeleton() }
+            items(columns * 4, key = { it }) { VideoGridItemSkeleton(coverAspectRatio = cardLayout.coverAspectRatio) }
         }
     } else if (error != null && items.isEmpty()) {
         Column(
@@ -1438,13 +1446,13 @@ private fun CommonListContent(
                 columns = GridCells.Fixed(columns),
                 state = resolvedGridState,
                 contentPadding = PaddingValues(
-                    start = spacing,
-                    end = spacing,
-                    top = spacing,
-                    bottom = padding.calculateBottomPadding() + spacing + 80.dp
+                    start = cardLayout.outerPaddingDp.dp,
+                    end = cardLayout.outerPaddingDp.dp,
+                    top = cardLayout.outerPaddingDp.dp,
+                    bottom = padding.calculateBottomPadding() + cardLayout.outerPaddingDp.dp + 80.dp
                 ),
-                horizontalArrangement = Arrangement.spacedBy(spacing),
-                verticalArrangement = Arrangement.spacedBy(spacing),
+                horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
+                verticalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
                 modifier = viewportModifier
             ) {
                  itemsIndexed(
@@ -1519,6 +1527,8 @@ private fun CommonListContent(
                                     showCoverGlassBadges = videoCardAppearance.showCoverGlassBadges,
                                     showInfoGlassBadges = videoCardAppearance.showInfoGlassBadges,
                                     showUpBadge = historyCardPresentation?.showUpBadge ?: true,
+                                    coverAspectRatio = cardLayout.coverAspectRatio,
+                                    compactMetadata = cardLayout.compactMetadata,
                                     showOnlineCount = showOnlineCount,
                                     onClick = { _, _ ->
                                         if (historyBatchMode) {

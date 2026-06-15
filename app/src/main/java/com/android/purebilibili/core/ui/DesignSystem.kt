@@ -193,7 +193,8 @@ fun ShimmerBox(
 @Composable
 fun VideoCardSkeleton(
     modifier: Modifier = Modifier,
-    index: Int = 0  //  支持交错动画延迟
+    index: Int = 0,  //  支持交错动画延迟
+    coverAspectRatio: Float = 4f / 3f
 ) {
     val delay = index * 80  // 每个卡片延迟 80ms
     
@@ -207,11 +208,11 @@ fun VideoCardSkeleton(
             .background(cardBackground)  //  使用主题色
             .padding(bottom = BiliDesign.Spacing.md)
     ) {
-        // 封面 - 使用正确的宽高比 (16:10)
+        // 封面 - 使用传入的宽高比
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 10f)
+                .aspectRatio(coverAspectRatio)
                 .clip(RoundedCornerShape(BiliDesign.Radius.md))
                 .shimmer(delayMillis = delay)
         )

@@ -87,6 +87,8 @@ import com.android.purebilibili.core.ui.rememberAppSearchIcon
 import com.android.purebilibili.core.ui.resolveOfficialVerifyBadge
 import com.android.purebilibili.core.ui.components.UpBadgeName
 import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard  //  使用首页卡片
+import com.android.purebilibili.feature.home.resolveHomeFeedCardLayout
+import com.android.purebilibili.core.store.HomeFeedCardStyle
 import com.android.purebilibili.core.store.SettingsManager  //  读取动画设置
 import com.android.purebilibili.data.repository.SearchOrder
 import com.android.purebilibili.data.repository.SearchDuration
@@ -561,6 +563,12 @@ fun SearchScreen(
     }
     val cardTransitionEnabled by SettingsManager.getCardTransitionEnabled(context).collectAsStateWithLifecycle(initialValue = false)
     val showOnlineCount by SettingsManager.getShowOnlineCount(context).collectAsStateWithLifecycle(initialValue = false)
+    val homeFeedCardStyle by SettingsManager
+        .getHomeFeedCardStyle(context)
+        .collectAsStateWithLifecycle(initialValue = HomeFeedCardStyle.OFFICIAL)
+    val cardLayout = remember(homeFeedCardStyle) {
+        resolveHomeFeedCardLayout(homeFeedCardStyle)
+    }
     val isSearchResultsScrolling by remember(historyListState, resultGridState, resultListState) {
         derivedStateOf {
             historyListState.isScrollInProgress ||
@@ -729,11 +737,11 @@ fun SearchScreen(
                                     contentPadding = PaddingValues(
                                         top = contentTopPadding + 8.dp,
                                         bottom = resultBottomPadding,
-                                        start = searchLayoutPolicy.resultHorizontalPaddingDp.dp,
-                                        end = searchLayoutPolicy.resultHorizontalPaddingDp.dp
+                                        start = cardLayout.outerPaddingDp.dp,
+                                        end = cardLayout.outerPaddingDp.dp
                                     ),
-                                    horizontalArrangement = Arrangement.spacedBy(searchLayoutPolicy.resultGridSpacingDp.dp),
-                                    verticalArrangement = Arrangement.spacedBy(searchLayoutPolicy.resultGridSpacingDp.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
+                                    verticalArrangement = Arrangement.spacedBy(cardLayout.itemSpacingDp.dp),
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
@@ -782,6 +790,8 @@ fun SearchScreen(
                                             blurEnabled = videoCardAppearance.blurEnabled,
                                             showCoverGlassBadges = videoCardAppearance.showCoverGlassBadges,
                                             showInfoGlassBadges = videoCardAppearance.showInfoGlassBadges,
+                                            coverAspectRatio = cardLayout.coverAspectRatio,
+                                            compactMetadata = cardLayout.compactMetadata,
                                             showOnlineCount = showOnlineCount,
                                             modifier = Modifier,
                                             //  [交互优化] 传递 onWatchLater 用于显示菜单选项

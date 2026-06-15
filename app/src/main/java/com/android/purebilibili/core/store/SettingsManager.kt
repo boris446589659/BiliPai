@@ -428,7 +428,7 @@ data class HomeSettings(
     val isHeaderCollapseEnabled: Boolean = true,
     val gridColumnCount: Int = 0, // [New] 网格列数 (0=自动, 1-6=固定)
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset = HomeFeedCardWidthPreset.AUTO,
-    val homeFeedCardStyle: HomeFeedCardStyle = HomeFeedCardStyle.CURRENT,
+    val homeFeedCardStyle: HomeFeedCardStyle = HomeFeedCardStyle.OFFICIAL,
     val cardAnimationEnabled: Boolean = false,    //  卡片进场动画（默认关闭）
     val cardTransitionEnabled: Boolean = true,    //  卡片过渡动画（默认开启）
     val videoTransitionRealtimeBlurEnabled: Boolean = true, // 视频转场实时模糊（默认开启）
@@ -1171,7 +1171,7 @@ object SettingsManager {
                 preferences[KEY_HOME_FEED_CARD_WIDTH_PRESET] ?: HomeFeedCardWidthPreset.AUTO.value
             ),
             homeFeedCardStyle = HomeFeedCardStyle.fromValue(
-                preferences[KEY_HOME_FEED_CARD_STYLE] ?: HomeFeedCardStyle.CURRENT.value
+                preferences[KEY_HOME_FEED_CARD_STYLE] ?: HomeFeedCardStyle.OFFICIAL.value
             ),
             cardAnimationEnabled = preferences[KEY_CARD_ANIMATION_ENABLED] ?: false,
             cardTransitionEnabled = preferences[KEY_CARD_TRANSITION_ENABLED] ?: true,
@@ -2115,7 +2115,7 @@ object SettingsManager {
     fun getHomeFeedCardStyle(context: Context): Flow<HomeFeedCardStyle> =
         context.settingsDataStore.data.map { preferences ->
             HomeFeedCardStyle.fromValue(
-                preferences[KEY_HOME_FEED_CARD_STYLE] ?: HomeFeedCardStyle.CURRENT.value
+                preferences[KEY_HOME_FEED_CARD_STYLE] ?: HomeFeedCardStyle.OFFICIAL.value
             )
         }
 
