@@ -734,11 +734,11 @@ fun PortraitVideoPager(
 
                 exoPlayer.stop()
                 exoPlayer.clearMediaItems()
-                danmakuManager.clear()
+                danmakuManager.clearForVideoChange()
                 isLoading = true
                 currentPlayingBvid = bvid
                 currentPlayingCid = 0L
-                currentPlayingAid = aid
+                currentPlayingAid = 0L
                 pendingAutoPlayGeneration = requestGeneration
                 renderedFirstFrameGeneration = -1
 
@@ -941,6 +941,7 @@ fun PortraitVideoPager(
                 exoPlayer = exoPlayer, // [核心] 传递共享播放器
                 currentPlayingBvid = currentPlayingBvid, // [修复] 传递当前播放的 BVID 用于校验
                 currentPlayingCid = currentPlayingCid,
+                currentPlayingAid = currentPlayingAid,
                 isPortraitPlaybackAllowed = isPortraitPlaybackAllowed,
                 isLoading = if (page == pagerState.currentPage) isLoading else false, // 只有当前页显示 Loading
                 danmakuManager = danmakuManager,
@@ -1000,6 +1001,7 @@ private fun VideoPageItem(
     exoPlayer: ExoPlayer,
     currentPlayingBvid: String?, // [新增]
     currentPlayingCid: Long,
+    currentPlayingAid: Long,
     isPortraitPlaybackAllowed: Boolean,
     isLoading: Boolean,
     danmakuManager: DanmakuManager,
@@ -1031,7 +1033,7 @@ private fun VideoPageItem(
     val currentAudioQuality by viewModel.audioQualityPreference.collectAsStateWithLifecycle(initialValue = -1
         )
     val bvid = if (item is ViewInfo) item.bvid else (item as RelatedVideo).bvid
-    val aid = if (item is ViewInfo) item.aid else (item as RelatedVideo).aid
+    val itemAid = if (item is ViewInfo) item.aid else (item as RelatedVideo).aid
     
     // [修复] 手动监听 ExoPlayer 播放状态，确保 UI 及时更新
     var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
@@ -1114,6 +1116,11 @@ private fun VideoPageItem(
     } else {
         0L
     }
+    val activeAid = resolvePortraitActiveAid(
+        isPlayerReadyForThisVideo = isPlayerReadyForThisVideo,
+        itemAid = itemAid,
+        currentPlayingAid = currentPlayingAid
+    )
 
     LaunchedEffect(
         playerViewRef,
@@ -1931,13 +1938,13 @@ private fun VideoPageItem(
     }
     val canHandlePortraitInteraction = shouldHandlePortraitVideoInteraction(
         isCurrentPage = isCurrentPage,
-        aid = aid,
+        aid = activeAid,
         bvid = bvid
     )
 
-    LaunchedEffect(favoriteSaveEvent?.version, aid) {
+    LaunchedEffect(favoriteSaveEvent?.version, activeAid) {
         val event = favoriteSaveEvent ?: return@LaunchedEffect
-        if (event.aid != aid || event.version == consumedFavoriteSaveEventVersion) {
+        if (event.aid != activeAid || event.version == consumedFavoriteSaveEventVersion) {
             return@LaunchedEffect
         }
         val nextFavoriteCount = (
@@ -2016,7 +2023,7 @@ private fun VideoPageItem(
                     val currentLikeState = resolvedInteractionState.isLiked
                     val currentLikeCount = resolvedInteractionState.likeCount
                     viewModel.toggleLikeForVideo(
-                        aid = aid,
+                        aid = activeAid,
                         bvid = bvid,
                         currentlyLiked = currentLikeState
                     ) { liked ->
@@ -2039,7 +2046,7 @@ private fun VideoPageItem(
                 if (canHandlePortraitInteraction) {
                     val currentInteractionState = resolvedInteractionState
                     viewModel.doTripleActionForVideo(
-                        aid = aid,
+                        aid = activeAid,
                         bvid = bvid,
                         currentLiked = currentInteractionState.isLiked,
                         currentCoinCount = currentSuccess?.coinCount ?: 0,
@@ -2058,7 +2065,7 @@ private fun VideoPageItem(
                 if (canHandlePortraitInteraction) {
                     when (resolvePortraitFavoriteAction()) {
                         PortraitFavoriteAction.OpenFavoriteFolders -> {
-                            viewModel.showFavoriteFolderDialog(aid)
+                            viewModel.showFavoriteFolderDialog(activeAid)
                         }
                     }
                 }
@@ -2208,7 +2215,7 @@ private fun VideoPageItem(
                 commentSheetVisibilityProgress = progress
             },
             commentViewModel = commentViewModel,
-            aid = aid,
+            aid = activeAid,
             upMid = authorMid,
             expectedReplyCount = if (isCurrentModelVideo && currentSuccess != null) currentSuccess.info.stat.reply else stat.reply,
             emoteMap = currentSuccess?.emoteMap ?: emptyMap(),
@@ -2239,10 +2246,10 @@ private fun VideoPageItem(
                 .collectAsStateWithLifecycle(initialValue = true
         )
 
-            LaunchedEffect(aid, commentFraudDetectionEnabled) {
+            LaunchedEffect(activeAid, commentFraudDetectionEnabled) {
                 viewModel.commentSentEvent.collect { reply ->
                     commentViewModel.onExternalCommentSent(
-                        aid = aid,
+                        aid = activeAid,
                         newReply = reply,
                         fraudDetectionEnabled = commentFraudDetectionEnabled
                     )
@@ -2272,7 +2279,7 @@ private fun VideoPageItem(
                         inputMessage = message,
                         imageUris = imageUris,
                         syncToDynamic = syncToDynamic,
-                        targetAid = aid
+                        targetAid = activeAid
                     )
                     viewModel.hideCommentInputDialog()
                 }
@@ -2322,6 +2329,14 @@ internal fun shouldHandlePortraitVideoInteraction(
     bvid: String
 ): Boolean {
     return isCurrentPage && aid > 0L && bvid.isNotBlank()
+}
+
+internal fun resolvePortraitActiveAid(
+    isPlayerReadyForThisVideo: Boolean,
+    itemAid: Long,
+    currentPlayingAid: Long
+): Long {
+    return if (isPlayerReadyForThisVideo) currentPlayingAid.coerceAtLeast(0L) else itemAid
 }
 
 internal fun resolvePortraitOverlayControlsVisible(

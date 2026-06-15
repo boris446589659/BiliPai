@@ -1712,6 +1712,26 @@ class DanmakuManager private constructor(
     }
 
     /**
+     * 竖屏切换视频时不仅要清屏，还要废弃未完成的旧 cid 加载结果。
+     * 否则旧请求可能在新页面封面阶段回填到同一个 DanmakuView。
+     */
+    fun clearForVideoChange() {
+        Log.d(TAG, "clearForVideoChange() - canceling active load and clearing displayed danmakus")
+        loadJob?.cancel()
+        isLoading = false
+        loadGeneration++
+        cachedCid = 0L
+        cachedDanmakuList = null
+        sourceDanmakuList = null
+        sourceAdvancedDanmakuList = null
+        sourceCommandDanmakuList = emptyList()
+        _advancedDanmakuFlow.value = emptyList()
+        _commandDanmakuFlow.value = emptyList()
+        clearExplicitSeekResyncMarker()
+        controller?.clear()
+    }
+
+    /**
      * 进入进度条拖动预览前，先暂停旧时间线，再清空屏幕上的旧弹幕。
      * 仅用于显式 seek scrub，避免用户拖动时继续看到旧时间线弹幕。
      */

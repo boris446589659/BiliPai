@@ -345,6 +345,38 @@ class PortraitVideoPagerPolicyTest {
     }
 
     @Test
+    fun portraitActiveAid_prefersLoadedVideoIdentityWhenPlayerIsReady() {
+        assertEquals(
+            2002L,
+            resolvePortraitActiveAid(
+                isPlayerReadyForThisVideo = true,
+                itemAid = 1001L,
+                currentPlayingAid = 2002L
+            )
+        )
+    }
+
+    @Test
+    fun portraitActiveAid_fallsBackToItemIdentityOnlyBeforePlayerTargetsPage() {
+        assertEquals(
+            1001L,
+            resolvePortraitActiveAid(
+                isPlayerReadyForThisVideo = false,
+                itemAid = 1001L,
+                currentPlayingAid = 2002L
+            )
+        )
+        assertEquals(
+            0L,
+            resolvePortraitActiveAid(
+                isPlayerReadyForThisVideo = true,
+                itemAid = 1001L,
+                currentPlayingAid = 0L
+            )
+        )
+    }
+
+    @Test
     fun portraitFavoriteTap_opensFavoriteFoldersInsteadOfImmediateDefaultFavorite() {
         assertEquals(
             PortraitFavoriteAction.OpenFavoriteFolders,
@@ -442,5 +474,13 @@ class PortraitVideoPagerPolicyTest {
         assertTrue(source.contains("portraitOverlayVisible = portraitOverlayVisible"))
         assertTrue(source.contains("onPortraitOverlayVisibleChange = { visible ->"))
         assertFalse(source.contains("var isOverlayVisible by remember"))
+    }
+
+    @Test
+    fun portraitVideoSwitch_cancelsPendingDanmakuLoadBeforeNewMediaLoads() {
+        val source = File("src/main/java/com/android/purebilibili/feature/video/ui/pager/PortraitVideoPager.kt").readText()
+
+        assertTrue(source.contains("danmakuManager.clearForVideoChange()"))
+        assertFalse(source.contains("danmakuManager.clear()\n                isLoading = true"))
     }
 }
