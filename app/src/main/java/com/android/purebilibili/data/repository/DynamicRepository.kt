@@ -20,22 +20,28 @@ object DynamicRepository {
     /**
      * 获取动态列表
      * @param refresh 是否刷新 (重置分页)
+     * @param incrementalRefresh 是否保留现有时间线，仅拉取更新基线之后的内容
      */
     suspend fun getDynamicFeed(
         refresh: Boolean = false,
         scope: DynamicFeedScope = DynamicFeedScope.DYNAMIC_SCREEN,
-        type: String = "all"
+        type: String = "all",
+        incrementalRefresh: Boolean = false
     ): Result<List<DynamicItem>> = withContext(Dispatchers.IO) {
         try {
-            val refreshUpdateBaseline = if (refresh) {
-                feedPagination.updateBaseline(scope, type)
-            } else {
-                ""
+            val paginationBeforeRefresh = feedPagination.snapshot(scope, type)
+            val useIncrementalRefresh = shouldUseDynamicIncrementalRefresh(
+                refresh = refresh,
+                incrementalRefreshEnabled = incrementalRefresh,
+                updateBaseline = paginationBeforeRefresh.updateBaseline
+            )
+            if (refresh && !useIncrementalRefresh) {
+                feedPagination.reset(scope, type)
             }
-            val refreshPaginationOffset = if (refresh) {
-                feedPagination.offset(scope, type)
+            val paginationForPageUpdate = if (refresh && !useIncrementalRefresh) {
+                DynamicPaginationState()
             } else {
-                ""
+                paginationBeforeRefresh
             }
             if (!feedPagination.hasMore(scope, type) && !refresh) {
                 return@withContext Result.success(emptyList())
@@ -50,7 +56,11 @@ object DynamicRepository {
                     NetworkModule.dynamicApi.getDynamicFeed(
                         type = type,
                         offset = previousOffset,
-                        updateBaseline = if (previousOffset.isBlank()) refreshUpdateBaseline else ""
+                        updateBaseline = if (previousOffset.isBlank() && useIncrementalRefresh) {
+                            paginationBeforeRefresh.updateBaseline
+                        } else {
+                            ""
+                        }
                     )
                 }.getOrElse { error ->
                     return@withContext Result.failure(error)
@@ -58,32 +68,32 @@ object DynamicRepository {
 
                 val data = response.data
                 if (data == null) {
-                    feedPagination.update(
+                    feedPagination.updateState(
                         scope = scope,
                         type = type,
-                        offset = if (refreshUpdateBaseline.isNotBlank()) {
-                            refreshPaginationOffset
-                        } else {
-                            previousOffset
-                        },
-                        updateBaseline = refreshUpdateBaseline,
-                        hasMore = false
+                        state = resolveDynamicPaginationStateAfterPage(
+                            paginationBeforeRefresh = paginationForPageUpdate,
+                            responseOffset = previousOffset,
+                            responseUpdateBaseline = "",
+                            responseHasMore = false,
+                            preserveExistingPagination = useIncrementalRefresh
+                        )
                     )
                     break
                 }
 
                 // 更新分页状态
                 requestOffset = data.offset
-                feedPagination.update(
+                feedPagination.updateState(
                     scope = scope,
                     type = type,
-                    offset = if (refreshUpdateBaseline.isNotBlank()) {
-                        refreshPaginationOffset
-                    } else {
-                        data.offset
-                    },
-                    updateBaseline = data.update_baseline.ifBlank { refreshUpdateBaseline },
-                    hasMore = data.has_more
+                    state = resolveDynamicPaginationStateAfterPage(
+                        paginationBeforeRefresh = paginationForPageUpdate,
+                        responseOffset = data.offset,
+                        responseUpdateBaseline = data.update_baseline,
+                        responseHasMore = data.has_more,
+                        preserveExistingPagination = useIncrementalRefresh
+                    )
                 )
 
                 // 过滤不可见的动态
@@ -374,7 +384,36 @@ internal fun resolveDynamicUpdateCountBaseline(
 ): String {
     if (responseBaseline.isBlank()) return currentBaseline
     if (advanceBaseline) return responseBaseline
-    return currentBaseline.ifBlank { responseBaseline }
+    return currentBaseline
+}
+
+internal fun shouldUseDynamicIncrementalRefresh(
+    refresh: Boolean,
+    incrementalRefreshEnabled: Boolean,
+    updateBaseline: String
+): Boolean {
+    return refresh && incrementalRefreshEnabled && updateBaseline.isNotBlank()
+}
+
+internal fun resolveDynamicPaginationStateAfterPage(
+    paginationBeforeRefresh: DynamicPaginationState,
+    responseOffset: String,
+    responseUpdateBaseline: String,
+    responseHasMore: Boolean,
+    preserveExistingPagination: Boolean
+): DynamicPaginationState {
+    val nextBaseline = responseUpdateBaseline.ifBlank {
+        paginationBeforeRefresh.updateBaseline
+    }
+    return if (preserveExistingPagination) {
+        paginationBeforeRefresh.copy(updateBaseline = nextBaseline)
+    } else {
+        DynamicPaginationState(
+            offset = responseOffset,
+            updateBaseline = nextBaseline,
+            hasMore = responseHasMore
+        )
+    }
 }
 
 enum class DynamicFeedScope {
@@ -413,6 +452,22 @@ internal class DynamicFeedPaginationRegistry {
                 updateBaseline = updateBaseline,
                 hasMore = hasMore
             )
+    }
+
+    fun updateState(
+        scope: DynamicFeedScope,
+        type: String = "all",
+        state: DynamicPaginationState
+    ) {
+        stateByScope[DynamicFeedPaginationKey(scope = scope, type = type)] = state.copy()
+    }
+
+    fun snapshot(
+        scope: DynamicFeedScope,
+        type: String = "all"
+    ): DynamicPaginationState {
+        return stateByScope[DynamicFeedPaginationKey(scope = scope, type = type)]?.copy()
+            ?: DynamicPaginationState()
     }
 
     fun offset(scope: DynamicFeedScope, type: String = "all"): String {

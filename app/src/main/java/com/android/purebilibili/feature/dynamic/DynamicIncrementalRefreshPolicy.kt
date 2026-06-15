@@ -59,3 +59,15 @@ internal fun shouldStartDynamicRefresh(
 ): Boolean {
     return !isRefreshing && !isLoadingLocked
 }
+
+internal fun resolveDynamicRefreshUserId(
+    selectedTab: Int,
+    selectedUserId: Long?
+): Long? {
+    return selectedUserId.takeIf {
+        shouldUseSelectedUserDynamicFeed(
+            selectedTab = selectedTab,
+            selectedUserId = selectedUserId
+        )
+    }
+}

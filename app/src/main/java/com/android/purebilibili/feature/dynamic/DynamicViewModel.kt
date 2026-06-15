@@ -249,9 +249,24 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
             _isRefreshing.value = true
         }
         try {
+            val refreshUserId = resolveDynamicRefreshUserId(
+                selectedTab = _selectedTab.value,
+                selectedUserId = _selectedUserId.value
+            )
             coroutineScope {
                 val dynamicJob = async {
-                    loadDynamicFeedInternal(refresh = true, showLoading = _uiState.value.items.isEmpty())
+                    if (refreshUserId != null) {
+                        loadUserDynamics(
+                            uid = refreshUserId,
+                            refresh = true,
+                            requestToken = activeUserDynamicsRequestToken
+                        )
+                    } else {
+                        loadDynamicFeedInternal(
+                            refresh = true,
+                            showLoading = _uiState.value.items.isEmpty()
+                        )
+                    }
                 }
                 val liveJob = async { loadFollowedUsersInternal() }
                 dynamicJob.await()
@@ -720,7 +735,8 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
             val result = DynamicRepository.getDynamicFeed(
                 refresh = refresh,
                 scope = DynamicFeedScope.DYNAMIC_SCREEN,
-                type = requestType
+                type = requestType,
+                incrementalRefresh = incrementalTimelineRefreshEnabled
             )
 
             result.fold(
@@ -774,7 +790,16 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     }
     
     fun refresh() {
-        if (!shouldStartDynamicRefresh(_isRefreshing.value, isTimelineLoadingLocked)) return
+        val refreshUserId = resolveDynamicRefreshUserId(
+            selectedTab = _selectedTab.value,
+            selectedUserId = _selectedUserId.value
+        )
+        val activeSourceLocked = if (refreshUserId != null) {
+            isUserLoadingLocked
+        } else {
+            isTimelineLoadingLocked
+        }
+        if (!shouldStartDynamicRefresh(_isRefreshing.value, activeSourceLocked)) return
         viewModelScope.launch { refreshData(showRefreshIndicator = true) }
     }
     

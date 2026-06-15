@@ -78,4 +78,20 @@ class DynamicIncrementalRefreshPolicyTest {
         assertEquals(false, shouldStartDynamicRefresh(isRefreshing = true, isLoadingLocked = false))
         assertEquals(false, shouldStartDynamicRefresh(isRefreshing = false, isLoadingLocked = true))
     }
+
+    @Test
+    fun refreshTarget_usesSelectedUserOnlyOnUserTab() {
+        assertEquals(
+            1001L,
+            resolveDynamicRefreshUserId(selectedTab = 4, selectedUserId = 1001L)
+        )
+        assertEquals(
+            null,
+            resolveDynamicRefreshUserId(selectedTab = 0, selectedUserId = 1001L)
+        )
+        assertEquals(
+            null,
+            resolveDynamicRefreshUserId(selectedTab = 4, selectedUserId = null)
+        )
+    }
 }

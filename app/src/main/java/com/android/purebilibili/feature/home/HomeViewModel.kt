@@ -1432,7 +1432,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
             refresh = !isLoadMore,
             scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
-            type = "video"
+            type = "video",
+            incrementalRefresh = incrementalTimelineRefreshEnabled
         )
         
         if (isLoadMore) delay(100)
