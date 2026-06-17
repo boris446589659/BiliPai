@@ -36,7 +36,6 @@ import com.android.purebilibili.feature.video.ui.gesture.resolveTwoFingerGesture
 import com.android.purebilibili.feature.video.ui.gesture.resolveTwoFingerSpeedGestureMode
 import com.android.purebilibili.feature.video.playback.policy.resolveDisplayedQualityId
 import com.android.purebilibili.core.ui.motion.AppMotionEasing
-import com.android.purebilibili.core.player.PlayerVolumeController
 import com.android.purebilibili.data.model.response.ViewPoint
 import com.android.purebilibili.feature.video.progress.PbpProgressData
 import com.android.purebilibili.feature.video.progress.buildPbpRidgeSamples
@@ -885,7 +884,7 @@ fun VideoPlayerSection(
     var isFlippedVertical by remember { mutableStateOf(false) }
 
     // 记录手势开始时的初始值
-    var startPlayerVolume by remember { mutableFloatStateOf(preferredPlayerVolume) }
+    var startVolumeStep by remember { mutableIntStateOf(0) }
     var startBrightness by remember { mutableFloatStateOf(0f) }
 
     // 记录累计拖动距离
@@ -1341,7 +1340,7 @@ fun VideoPlayerSection(
                                 totalDragDistanceY = 0f
                                 totalDragDistanceX = 0f
 
-                                startPlayerVolume = playerState.player.volume
+                                startVolumeStep = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                                 startPosition = sharedSeekSession.sliderPositionMs.coerceAtLeast(0L)
                                 seekTargetTime = startPosition
 
@@ -1416,14 +1415,6 @@ fun VideoPlayerSection(
                                             "👆 Swipe to fullscreen triggered"
                                         }
                                     }
-                                }
-                            }
-                            if (completedGestureMode == VideoGestureMode.Volume) {
-                                settingsScope.launch {
-                                    SettingsManager.setPreferredPlayerVolume(
-                                        context,
-                                        playerState.player.volume
-                                    )
                                 }
                             }
                             isGestureVisible = false
@@ -1610,14 +1601,24 @@ fun VideoPlayerSection(
                                     gestureIcon = CupertinoIcons.Default.SunMax
                                 }
                                 VideoGestureMode.Volume -> {
-                                    val newPlayerVolume = PlayerVolumeController.resolveFromGesture(
-                                        startVolume = startPlayerVolume,
+                                    val maxVolumeStep = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                    val newVolumeStep = resolveSystemStreamVolumeFromGesture(
+                                        startVolumeStep = startVolumeStep,
+                                        maxVolumeStep = maxVolumeStep,
                                         totalDragDistanceY = totalDragDistanceY,
-                                        gestureHeightPx = size.height.toFloat(),
+                                        screenHeightPx = size.height.toFloat(),
                                         gestureSensitivity = gestureSensitivity
                                     )
-                                    playerState.player.volume = newPlayerVolume
-                                    gesturePercent = newPlayerVolume
+                                    audioManager.setStreamVolume(
+                                        AudioManager.STREAM_MUSIC,
+                                        newVolumeStep,
+                                        0
+                                    )
+                                    gesturePercent = if (maxVolumeStep > 0) {
+                                        newVolumeStep.toFloat() / maxVolumeStep.toFloat()
+                                    } else {
+                                        0f
+                                    }
                                     //  动态音量图标：3 级
                                     gestureIcon = when {
                                         gesturePercent < 0.01f -> CupertinoIcons.Default.SpeakerSlash

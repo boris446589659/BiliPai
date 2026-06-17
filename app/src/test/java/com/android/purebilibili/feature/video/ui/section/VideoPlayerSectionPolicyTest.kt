@@ -1172,6 +1172,25 @@ class VideoPlayerSectionPolicyTest {
     }
 
     @Test
+    fun volumeGesture_usesSystemMusicStreamInsteadOfPlayerVolume() {
+        val source = loadVideoPlayerSectionSource()
+        val dragStartBlock = source
+            .substringAfter("onDragStart = { offset ->")
+            .substringBefore("onDragEnd = {")
+        val volumeGestureBlock = source
+            .substringAfter("VideoGestureMode.Volume -> {")
+            .substringBefore("VideoGestureMode.Seek ->")
+            .substringBefore("else ->")
+
+        assertTrue(dragStartBlock.contains("startVolumeStep = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)"))
+        assertTrue(volumeGestureBlock.contains("resolveSystemStreamVolumeFromGesture("))
+        assertTrue(volumeGestureBlock.contains("audioManager.setStreamVolume("))
+        assertTrue(volumeGestureBlock.contains("AudioManager.STREAM_MUSIC"))
+        assertFalse(volumeGestureBlock.contains("playerState.player.volume ="))
+        assertFalse(source.contains("SettingsManager.setPreferredPlayerVolume("))
+    }
+
+    @Test
     fun longPressExclusiveDrag_onlyConsumesBeforeSpeedIsLocked() {
         assertTrue(
             shouldConsumeExclusiveLongPressSpeedDrag(
