@@ -78,4 +78,10 @@ class HomeHeroCarouselPolicyTest {
         assertTrue(left.scale < centered.scale)
         assertTrue(left.alpha < centered.alpha)
     }
+
+    @Test
+    fun `carousel preview stays hidden until first frame is rendered`() {
+        assertEquals(0f, resolveHomeHeroCarouselPreviewAlpha(hasRenderedFirstFrame = false))
+        assertEquals(1f, resolveHomeHeroCarouselPreviewAlpha(hasRenderedFirstFrame = true))
+    }
 }

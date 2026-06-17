@@ -22,11 +22,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,7 +33,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +60,7 @@ import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.feature.home.HomeHeroCarouselCardTransform
 import com.android.purebilibili.feature.home.resolveHomeHeroCarouselCardTransform
-import kotlinx.coroutines.launch
+import com.android.purebilibili.feature.home.resolveHomeHeroCarouselPreviewAlpha
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -79,7 +75,6 @@ internal fun HomeHeroCarousel(
     if (videos.isEmpty()) return
 
     val pagerState = rememberPagerState { videos.size }
-    val scope = rememberCoroutineScope()
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -132,28 +127,6 @@ internal fun HomeHeroCarousel(
                         )
                 )
             }
-        }
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 22.dp, bottom = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            HomeHeroCarouselArrowButton(
-                onClick = {
-                    val target = if (pagerState.currentPage == 0) videos.lastIndex else pagerState.currentPage - 1
-                    scope.launch { pagerState.animateScrollToPage(target) }
-                },
-                isPrevious = true
-            )
-            HomeHeroCarouselArrowButton(
-                onClick = {
-                    val target = if (pagerState.currentPage == videos.lastIndex) 0 else pagerState.currentPage + 1
-                    scope.launch { pagerState.animateScrollToPage(target) }
-                },
-                isPrevious = false
-            )
         }
     }
 }
@@ -222,7 +195,7 @@ private fun HomeHeroCarouselCard(
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 28.dp, end = 120.dp, bottom = 44.dp),
+                    .padding(start = 28.dp, end = 28.dp, bottom = 44.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (activeForPlayback) {
@@ -248,32 +221,9 @@ private fun HomeHeroCarouselCard(
 }
 
 @Composable
-private fun HomeHeroCarouselArrowButton(
-    onClick: () -> Unit,
-    isPrevious: Boolean
-) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier
-            .size(48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.Black.copy(alpha = 0.34f))
-    ) {
-        Icon(
-            imageVector = if (isPrevious) {
-                Icons.AutoMirrored.Rounded.KeyboardArrowLeft
-            } else {
-                Icons.AutoMirrored.Rounded.KeyboardArrowRight
-            },
-            contentDescription = if (isPrevious) "上一个" else "下一个",
-            tint = Color.White
-        )
-    }
-}
-
-@Composable
 private fun MutedHeroVideoPlayer(url: String) {
     val context = LocalContext.current
+    var hasRenderedFirstFrame by remember(url) { mutableStateOf(false) }
     val player = remember {
         ExoPlayer.Builder(context).build().apply {
             playWhenReady = true
@@ -282,11 +232,21 @@ private fun MutedHeroVideoPlayer(url: String) {
         }
     }
     LaunchedEffect(url) {
+        hasRenderedFirstFrame = false
         player.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
         player.prepare()
     }
     DisposableEffect(player) {
-        onDispose { player.release() }
+        val listener = object : Player.Listener {
+            override fun onRenderedFirstFrame() {
+                hasRenderedFirstFrame = true
+            }
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
     }
     AndroidView(
         factory = { ctx ->
@@ -294,8 +254,13 @@ private fun MutedHeroVideoPlayer(url: String) {
                 this.player = player
                 useController = false
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
         },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                alpha = resolveHomeHeroCarouselPreviewAlpha(hasRenderedFirstFrame)
+            }
     )
 }

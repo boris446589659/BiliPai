@@ -48,3 +48,7 @@ internal fun resolveHomeHeroCarouselCardTransform(
         zIndex = 1f - distance
     )
 }
+
+internal fun resolveHomeHeroCarouselPreviewAlpha(
+    hasRenderedFirstFrame: Boolean
+): Float = if (hasRenderedFirstFrame) 1f else 0f
