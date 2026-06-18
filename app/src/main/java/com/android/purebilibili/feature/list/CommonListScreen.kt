@@ -2,7 +2,10 @@ package com.android.purebilibili.feature.list
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import dev.chrisbanes.haze.HazeState
 import com.android.purebilibili.core.ui.blur.hazeSourceCompat
 import dev.chrisbanes.haze.hazeEffect
@@ -13,6 +16,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.Job
 import androidx.compose.ui.platform.LocalContext // [New]
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity // [New]
@@ -529,9 +533,32 @@ fun CommonListScreen(
     var headerHeightPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val headerHeightDp = with(LocalDensity.current) { headerHeightPx.toDp() }
     var commonListHeaderOffsetPx by remember { mutableFloatStateOf(0f) }
+    var commonListHeaderSettleJob by remember { androidx.compose.runtime.mutableStateOf<Job?>(null) }
     val commonListHeaderCollapseMode = homeSettings.commonListHeaderCollapseMode
     val commonListHeaderCollapseEnabled = supportsCollapsibleCommonListHeader &&
         commonListHeaderCollapseMode != CommonListHeaderCollapseMode.ALWAYS_VISIBLE
+    fun animateCommonListHeaderOffsetTo(targetOffsetPx: Float) {
+        if (kotlin.math.abs(commonListHeaderOffsetPx - targetOffsetPx) <= 0.5f) {
+            commonListHeaderOffsetPx = targetOffsetPx
+            return
+        }
+        commonListHeaderSettleJob?.cancel()
+        commonListHeaderSettleJob = scope.launch {
+            animate(
+                initialValue = commonListHeaderOffsetPx,
+                targetValue = targetOffsetPx,
+                animationSpec = tween(durationMillis = 180, easing = LinearOutSlowInEasing)
+            ) { value, _ ->
+                commonListHeaderOffsetPx = value
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (commonListHeaderSettleJob === job) {
+                    commonListHeaderSettleJob = null
+                }
+            }
+        }
+    }
     val isCommonListAtTop by remember(activeCommonListScrollState) {
         derivedStateOf {
             when (val scrollState = activeCommonListScrollState()) {
@@ -548,19 +575,56 @@ fun CommonListScreen(
         commonListHeaderCollapseMode,
         isCommonListAtTop,
         headerHeightPx,
-        supportsCollapsibleCommonListHeader
+        supportsCollapsibleCommonListHeader,
+        favoriteContentMode,
+        pagerState.isScrollInProgress
     ) {
-        commonListHeaderOffsetPx = resolveCommonListHeaderOffsetPx(
-            currentOffsetPx = commonListHeaderOffsetPx,
-            scrollDeltaYPx = 0f,
+        if (favoriteContentMode == FavoriteContentMode.PAGER && pagerState.isScrollInProgress) {
+            return@LaunchedEffect
+        }
+        if (
+            !supportsCollapsibleCommonListHeader ||
+            commonListHeaderCollapseMode == CommonListHeaderCollapseMode.ALWAYS_VISIBLE ||
+            isCommonListAtTop
+        ) {
+            animateCommonListHeaderOffsetTo(0f)
+        }
+    }
+    LaunchedEffect(
+        commonListHeaderCollapseMode,
+        headerHeightPx,
+        supportsCollapsibleCommonListHeader,
+        isSubscribedBrowse,
+        favoriteContentMode,
+        pagerState.settledPage,
+        pagerState.isScrollInProgress,
+        favoritePagerGridStates.size
+    ) {
+        if (favoriteContentMode == FavoriteContentMode.PAGER && pagerState.isScrollInProgress) {
+            return@LaunchedEffect
+        }
+        val (firstVisibleItemIndex, firstVisibleItemScrollOffset) =
+            when (val scrollState = activeCommonListScrollState()) {
+                is CommonListScrollState.Grid -> Pair(
+                    scrollState.state.firstVisibleItemIndex,
+                    scrollState.state.firstVisibleItemScrollOffset
+                )
+                is CommonListScrollState.List -> Pair(
+                    scrollState.state.firstVisibleItemIndex,
+                    scrollState.state.firstVisibleItemScrollOffset
+                )
+            }
+        val targetOffsetPx = resolveCommonListHeaderOffsetForSettledContent(
+            firstVisibleItemIndex = firstVisibleItemIndex,
+            firstVisibleItemScrollOffset = firstVisibleItemScrollOffset,
             maxCollapsePx = headerHeightPx.toFloat(),
-            isAtTop = isCommonListAtTop,
             mode = if (supportsCollapsibleCommonListHeader) {
                 commonListHeaderCollapseMode
             } else {
                 CommonListHeaderCollapseMode.ALWAYS_VISIBLE
             }
         )
+        animateCommonListHeaderOffsetTo(targetOffsetPx)
     }
     val commonListHeaderScrollConnection = remember(
         commonListHeaderCollapseMode,
@@ -569,13 +633,24 @@ fun CommonListScreen(
         supportsCollapsibleCommonListHeader
     ) {
         object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!supportsCollapsibleCommonListHeader || kotlin.math.abs(available.y) < kotlin.math.abs(available.x)) {
+            // 仅跟随内容实际消费的位移，避免横向标签行的纵向手势让顶部栏与列表占位失步。
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (
+                    !supportsCollapsibleCommonListHeader ||
+                    kotlin.math.abs(consumed.y) < 0.5f ||
+                    kotlin.math.abs(consumed.y) < kotlin.math.abs(consumed.x)
+                ) {
                     return Offset.Zero
                 }
-                commonListHeaderOffsetPx = resolveCommonListHeaderOffsetPx(
+                commonListHeaderSettleJob?.cancel()
+                commonListHeaderSettleJob = null
+                commonListHeaderOffsetPx = resolveCommonListHeaderOffsetAfterContentScroll(
                     currentOffsetPx = commonListHeaderOffsetPx,
-                    scrollDeltaYPx = available.y,
+                    contentConsumedDeltaYPx = consumed.y,
                     maxCollapsePx = headerHeightPx.toFloat(),
                     isAtTop = isCommonListAtTop,
                     mode = commonListHeaderCollapseMode

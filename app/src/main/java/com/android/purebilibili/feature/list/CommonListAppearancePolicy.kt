@@ -69,6 +69,34 @@ internal fun resolveCommonListHeaderOffsetPx(
     return (currentOffsetPx + scrollDeltaYPx).coerceIn(-maxCollapsePx, 0f)
 }
 
+internal fun resolveCommonListHeaderOffsetAfterContentScroll(
+    currentOffsetPx: Float,
+    contentConsumedDeltaYPx: Float,
+    maxCollapsePx: Float,
+    isAtTop: Boolean,
+    mode: CommonListHeaderCollapseMode
+): Float = resolveCommonListHeaderOffsetPx(
+    currentOffsetPx = currentOffsetPx,
+    scrollDeltaYPx = contentConsumedDeltaYPx,
+    maxCollapsePx = maxCollapsePx,
+    isAtTop = isAtTop,
+    mode = mode
+)
+
+internal fun resolveCommonListHeaderOffsetForSettledContent(
+    firstVisibleItemIndex: Int,
+    firstVisibleItemScrollOffset: Int,
+    maxCollapsePx: Float,
+    mode: CommonListHeaderCollapseMode
+): Float {
+    if (mode == CommonListHeaderCollapseMode.ALWAYS_VISIBLE || maxCollapsePx <= 0f) return 0f
+    return if (firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0) {
+        0f
+    } else {
+        -maxCollapsePx
+    }
+}
+
 internal fun resolveCommonListVideoCardAppearance(
     homeSettings: HomeSettings,
     uiPreset: UiPreset

@@ -85,4 +85,80 @@ class CommonListHeaderCollapsePolicyTest {
             )
         )
     }
+
+    @Test
+    fun `settled page at top expands header`() {
+        assertEquals(
+            0f,
+            resolveCommonListHeaderOffsetForSettledContent(
+                firstVisibleItemIndex = 0,
+                firstVisibleItemScrollOffset = 0,
+                maxCollapsePx = 240f,
+                mode = CommonListHeaderCollapseMode.SHOW_ON_REVERSE_SCROLL
+            )
+        )
+    }
+
+    @Test
+    fun `settled page away from top keeps header collapsed`() {
+        assertEquals(
+            -240f,
+            resolveCommonListHeaderOffsetForSettledContent(
+                firstVisibleItemIndex = 1,
+                firstVisibleItemScrollOffset = 0,
+                maxCollapsePx = 240f,
+                mode = CommonListHeaderCollapseMode.SHOW_ON_REVERSE_SCROLL
+            )
+        )
+        assertEquals(
+            -240f,
+            resolveCommonListHeaderOffsetForSettledContent(
+                firstVisibleItemIndex = 0,
+                firstVisibleItemScrollOffset = 1,
+                maxCollapsePx = 240f,
+                mode = CommonListHeaderCollapseMode.SHOW_AT_TOP_ONLY
+            )
+        )
+    }
+
+    @Test
+    fun `always visible mode stays expanded after page switch`() {
+        assertEquals(
+            0f,
+            resolveCommonListHeaderOffsetForSettledContent(
+                firstVisibleItemIndex = 8,
+                firstVisibleItemScrollOffset = 120,
+                maxCollapsePx = 240f,
+                mode = CommonListHeaderCollapseMode.ALWAYS_VISIBLE
+            )
+        )
+    }
+
+    @Test
+    fun `header ignores gesture delta when list consumes no vertical scroll`() {
+        assertEquals(
+            -40f,
+            resolveCommonListHeaderOffsetAfterContentScroll(
+                currentOffsetPx = -40f,
+                contentConsumedDeltaYPx = 0f,
+                maxCollapsePx = 240f,
+                isAtTop = false,
+                mode = CommonListHeaderCollapseMode.SHOW_ON_REVERSE_SCROLL
+            )
+        )
+    }
+
+    @Test
+    fun `header follows vertical scroll consumed by list`() {
+        assertEquals(
+            -100f,
+            resolveCommonListHeaderOffsetAfterContentScroll(
+                currentOffsetPx = -40f,
+                contentConsumedDeltaYPx = -60f,
+                maxCollapsePx = 240f,
+                isAtTop = false,
+                mode = CommonListHeaderCollapseMode.SHOW_ON_REVERSE_SCROLL
+            )
+        )
+    }
 }
