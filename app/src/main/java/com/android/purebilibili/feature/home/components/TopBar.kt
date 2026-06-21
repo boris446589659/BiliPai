@@ -943,12 +943,10 @@ private fun LightweightHomeTopTabs(
             }
         }
         val topTabIndicatorDragScaleProgress = rememberBottomBarIndicatorDragScaleProgress(
-            isDragging = topTabShouldStretchIndicator
+            isDragging = topTabDragActive
         )
         val topTabPressProgress = if (topTabDragActive) {
             topTabDragState.pressProgress
-        } else if (topTabShouldStretchIndicator) {
-            topTabIndicatorDragScaleProgress
         } else {
             0f
         }
@@ -1990,6 +1988,8 @@ internal fun resolveTopTabIndicatorLayerTransform(
     val bottomBarTransform = resolveBottomBarIndicatorLayerTransform(
         motionProgress = motionProgress,
         velocityItemsPerSecond = velocityItemsPerSecond,
+        isDragging = true,
+        dragScaleProgress = motionProgress,
         motionSpec = motionSpec
     )
     return bottomBarTransform
@@ -2000,7 +2000,7 @@ internal fun resolveTopTabIndicatorScaleProgress(
     dragScaleProgress: Float,
     pressProgress: Float
 ): Float {
-    if (pagerSliding) return 1f
+    if (pagerSliding) return 0f
     return maxOf(dragScaleProgress, pressProgress).coerceIn(0f, 1f)
 }
 

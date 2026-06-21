@@ -198,9 +198,9 @@ class TopTabRefractionPolicyTest {
     }
 
     @Test
-    fun `pager sliding uses full bottom bar stretch progress`() {
+    fun `pager sliding uses velocity deformation without drag enlargement`() {
         assertEquals(
-            1f,
+            0f,
             resolveTopTabIndicatorScaleProgress(
                 pagerSliding = true,
                 dragScaleProgress = 0.2f,
@@ -208,6 +208,13 @@ class TopTabRefractionPolicyTest {
             ),
             0.001f
         )
+        val top = resolveTopTabIndicatorLayerTransform(
+            motionProgress = 0f,
+            velocityItemsPerSecond = 2f
+        )
+
+        assertTrue(top.scaleX > 1f)
+        assertTrue(top.scaleY < 1f)
         assertEquals(
             0.6f,
             resolveTopTabIndicatorScaleProgress(
