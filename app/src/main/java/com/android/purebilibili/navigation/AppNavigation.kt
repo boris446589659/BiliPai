@@ -1159,16 +1159,8 @@ fun AppNavigation(
                                         contentReady = bottomPagerContentReady
                                     )
                                 ) {
-                                    val renderPage = resolveBottomPagerRenderPage(
-                                        page = page,
-                                        currentPage = bottomPagerState.currentPage,
-                                        selectedPage = mainBottomPagerState.selectedPage,
-                                        navigationStartPage = mainBottomPagerState.navigationStartPage,
-                                        isNavigating = mainBottomPagerState.isNavigating
-                                    )
-                                    val item = visibleBottomBarItems.getOrNull(renderPage) ?: slotItem
-                                    val pageKey = bottomPagerNavKeyForItem(item)
-                                    bottomPagerSaveableStateHolder.SaveableStateProvider(resolveBottomPagerSaveableStateKey(item)) {
+                                    val pageKey = bottomPagerNavKeyForItem(slotItem)
+                                    bottomPagerSaveableStateHolder.SaveableStateProvider(resolveBottomPagerSaveableStateKey(slotItem)) {
                                         CompositionLocalProvider(
                                             LocalVideoCardSharedElementSourceRoute provides pageKey.toLegacyRoute()
                                         ) {

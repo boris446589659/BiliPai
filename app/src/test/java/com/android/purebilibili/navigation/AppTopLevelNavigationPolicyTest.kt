@@ -456,27 +456,32 @@ class AppTopLevelNavigationPolicyTest {
     }
 
     @Test
-    fun bottomPagerPreJump_rendersStartPageInIntermediateSlot() {
-        assertEquals(
-            0,
-            resolveBottomPagerRenderPage(
-                page = 3,
-                currentPage = 3,
-                selectedPage = 4,
-                navigationStartPage = 0,
-                isNavigating = true
-            )
+    fun bottomPagerNavigation_keepsSaveableKeysUniqueForFarJump() {
+        val visibleItems = listOf(
+            BottomNavItem.HOME,
+            BottomNavItem.DYNAMIC,
+            BottomNavItem.HISTORY,
+            BottomNavItem.PROFILE,
+            BottomNavItem.SETTINGS
         )
-        assertEquals(
-            4,
-            resolveBottomPagerRenderPage(
-                page = 4,
-                currentPage = 3,
-                selectedPage = 4,
-                navigationStartPage = 0,
-                isNavigating = true
-            )
-        )
+
+        val saveableKeys = visibleItems.indices
+            .filter { page ->
+                shouldComposeBottomPagerPage(
+                    item = visibleItems[page],
+                    page = page,
+                    currentPage = 3,
+                    selectedPage = 4,
+                    isNavigating = true,
+                    navigationStartPage = 0,
+                    contentReady = true
+                )
+            }
+            .map { page ->
+                resolveBottomPagerSaveableStateKey(visibleItems[page])
+            }
+
+        assertEquals(saveableKeys.distinct(), saveableKeys)
     }
 
     @Test

@@ -16,7 +16,7 @@ class BottomPagerStatePersistenceStructureTest {
         assertTrue(source.contains("rememberMainBottomPagerState("))
         assertTrue(source.contains("HorizontalPager("))
         assertTrue(source.contains("rememberSaveableStateHolder()"))
-        assertTrue(source.contains("SaveableStateProvider(resolveBottomPagerSaveableStateKey(item))"))
+        assertTrue(source.contains("SaveableStateProvider(resolveBottomPagerSaveableStateKey(slotItem))"))
         assertTrue(source.contains("var historyHasActivated by rememberSaveable"))
         assertTrue(source.contains("userScrollEnabled = shouldEnableBottomPagerUserScroll()"))
         assertTrue(source.contains("resolveBottomPagerRenderBudget(isNavigating = mainBottomPagerState.isNavigating)"))

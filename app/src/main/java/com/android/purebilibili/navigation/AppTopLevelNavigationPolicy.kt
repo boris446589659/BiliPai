@@ -142,20 +142,6 @@ internal fun resolveBottomPagerNavigationDurationMillis(): Int = 300
 
 internal fun resolveBottomPagerBeyondViewportPageCount(): Int = 0
 
-internal fun resolveBottomPagerRenderPage(
-    page: Int,
-    currentPage: Int,
-    selectedPage: Int,
-    navigationStartPage: Int,
-    isNavigating: Boolean
-): Int {
-    val isPreJumpPage = isNavigating &&
-        page == currentPage &&
-        page != navigationStartPage &&
-        page != selectedPage
-    return if (isPreJumpPage) navigationStartPage else page
-}
-
 internal fun resolveBottomPagerRenderBudget(isNavigating: Boolean): BottomPagerRenderBudget {
     return BottomPagerRenderBudget(
         isTransitionRunning = isNavigating,
