@@ -347,6 +347,10 @@ internal fun resolveSubReplyPreviewSummaryLabel(
     }
 }
 
+internal fun resolveSubReplyOpenTargetId(rootReplyId: Long, clickedReplyId: Long): Long {
+    return clickedReplyId.takeIf { it > 0L && it != rootReplyId } ?: 0L
+}
+
 internal fun resolveReplyCommentShareUrl(item: ReplyItem): String {
     val rootId = if (item.root > 0L) item.root else item.rpid
     return buildString {
@@ -993,7 +997,7 @@ fun ReplyItemView(
     lightweightMode: Boolean = false,
     showIdentityDecorations: Boolean = true,
     onClick: () -> Unit,
-    onSubClick: (ReplyItem) -> Unit,
+    onSubClick: (ReplyItem, Long) -> Unit,
     onTimestampClick: ((Long) -> Unit)? = null,
     onImagePreview: ((List<String>, Int, Rect?, ImagePreviewTextContent?) -> Unit)? = null,
     isLiked: Boolean = item.action == 1,
@@ -1212,7 +1216,7 @@ fun ReplyItemView(
                 shareReplyComment()
             },
             onReply = {
-                onReplyClick?.invoke() ?: onSubClick(item)
+                onReplyClick?.invoke() ?: onSubClick(item, 0L)
             },
             onBlockUser = {
                 blockReplyUser()
@@ -1253,7 +1257,7 @@ fun ReplyItemView(
             .combinedClickable(
                 onClick = {
                     if (openThreadFromRootClick) {
-                        onSubClick(item)
+                        onSubClick(item, 0L)
                     } else {
                         onClick()
                     }
@@ -1387,7 +1391,7 @@ fun ReplyItemView(
                         noteCvidStr = item.noteCvidStr,
                         prefix = contentPrefix,
                         onPlainTextClick = if (openThreadFromRootClick) {
-                            { onSubClick(item) }
+                            { onSubClick(item, 0L) }
                         } else {
                             null
                         }
@@ -1419,7 +1423,7 @@ fun ReplyItemView(
                     ReplyTextAction(
                         label = "回复",
                         appearance = appearance,
-                        onClick = { onReplyClick?.invoke() ?: onSubClick(item) }
+                        onClick = { onReplyClick?.invoke() ?: onSubClick(item, 0L) }
                     )
 
                     if (!specialLabelText.isNullOrEmpty()) {
@@ -1556,7 +1560,12 @@ fun ReplyItemView(
                                     .fillMaxWidth()
                                     .testTag("$COMMENT_SUB_REPLY_PREVIEW_TAG_PREFIX${subReply.rpid}")
                                     .combinedClickable(
-                                        onClick = { onSubClick(item) },
+                                        onClick = {
+                                            onSubClick(
+                                                item,
+                                                resolveSubReplyOpenTargetId(item.rpid, subReply.rpid)
+                                            )
+                                        },
                                         onLongClick = {
                                             copyToClipboard(
                                                 subReply.content.message,
@@ -1580,7 +1589,12 @@ fun ReplyItemView(
                                     onVoteClick = { voteId -> onUrlClick?.invoke("bilibili://vote?id=$voteId") },
                                     noteCvidStr = subReply.noteCvidStr,
                                     prefix = prefix,
-                                    onPlainTextClick = { onSubClick(item) }
+                                    onPlainTextClick = {
+                                        onSubClick(
+                                            item,
+                                            resolveSubReplyOpenTargetId(item.rpid, subReply.rpid)
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -1602,7 +1616,7 @@ fun ReplyItemView(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("$COMMENT_VIEW_ALL_REPLIES_TAG_PREFIX${item.rpid}")
-                                    .clickable { onSubClick(item) },
+                                    .clickable { onSubClick(item, 0L) },
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Text(

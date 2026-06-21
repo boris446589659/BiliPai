@@ -212,7 +212,7 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                             onPageSelect = { viewModel.switchPage(it) },
                             onUpClick = navigateToUserSpaceFromVideo,
                             onRelatedVideoClick = navigateToRelatedVideo,
-                            onSubReplyClick = { commentViewModel.openSubReply(it) },
+                            onSubReplyClick = commentViewModel::openSubReply,
                             onCommentReplyClick = { replyItem ->
                                 viewModel.setReplyingTo(replyItem)
                                 viewModel.showCommentInputDialog()

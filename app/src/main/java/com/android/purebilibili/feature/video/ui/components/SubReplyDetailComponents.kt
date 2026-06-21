@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -55,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -387,6 +389,7 @@ internal fun SubReplyDetailContent(
     val appearance = rememberVideoCommentAppearance()
     val unusedShowUpFlag = showUpFlag
     val listState = rememberLazyListState()
+    var highlightedTargetId by remember(rootReply.rpid) { mutableStateOf(0L) }
     var conversationAnchor by remember(rootReply.rpid) { mutableStateOf<ReplyItem?>(null) }
     val visibleReplies = remember(subReplies, conversationAnchor, isConversationMode) {
         val anchor = conversationAnchor
@@ -436,13 +439,22 @@ internal fun SubReplyDetailContent(
         listState.scrollToItem(0)
     }
     LaunchedEffect(targetReplyId, visibleReplies, isLoading, isEnd) {
+        if (targetReplyId <= 0L) {
+            highlightedTargetId = 0L
+            return@LaunchedEffect
+        }
         val targetIndex = resolveSubReplyTargetListIndex(
             rootReplyId = rootReply.rpid,
             visibleReplies = visibleReplies,
             targetReplyId = targetReplyId
         )
         when {
-            targetIndex != null -> listState.animateScrollToItem(targetIndex)
+            targetIndex != null -> {
+                listState.animateScrollToItem(targetIndex)
+                highlightedTargetId = targetReplyId
+                delay(1_400)
+                highlightedTargetId = 0L
+            }
             targetReplyId > 0L && !isLoading && !isEnd && !effectiveConversationMode -> onLoadMore()
         }
     }
@@ -606,6 +618,7 @@ internal fun SubReplyDetailContent(
                     SubReplyDetailItem(
                             item = item,
                             appearance = appearance,
+                            highlighted = item.rpid == highlightedTargetId,
                             isRootItem = false,
                             upMid = upMid,
                             emoteMap = emoteMap,
@@ -665,6 +678,7 @@ internal fun SubReplyDetailContent(
 private fun SubReplyDetailItem(
     item: ReplyItem,
     appearance: SubReplyDetailAppearance,
+    highlighted: Boolean = false,
     isRootItem: Boolean,
     upMid: Long,
     emoteMap: Map<String, String>,
@@ -684,6 +698,15 @@ private fun SubReplyDetailItem(
     auxiliaryLabel: String?,
     showTrailingDivider: Boolean
 ) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (highlighted) {
+            appearance.accentColor.copy(alpha = 0.14f)
+        } else {
+            appearance.panelColor
+        },
+        animationSpec = tween(durationMillis = 280),
+        label = "subReplyTargetHighlight"
+    )
     val displayLocation = remember(item.replyControl?.location) {
         resolveReplyLocationText(item.replyControl?.location)
     }
@@ -838,7 +861,7 @@ private fun SubReplyDetailItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(appearance.panelColor)
+            .drawBehind { drawRect(backgroundColor) }
             .combinedClickable(
                 onClick = {},
                 onLongClick = { showActionSheet = true }

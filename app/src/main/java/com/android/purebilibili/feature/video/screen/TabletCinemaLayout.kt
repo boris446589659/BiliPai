@@ -1223,7 +1223,7 @@ private fun CinemaCommentsPane(
                     isPinned = reply.rpid in commentState.pinnedReplyIds,
                     emoteMap = success.emoteMap,
                     onClick = {},
-                    onSubClick = { commentViewModel.openSubReply(it) },
+                    onSubClick = commentViewModel::openSubReply,
                     onTimestampClick = { positionMs ->
                         seekPlayerFromUserAction(playerState.player, positionMs)
                     },

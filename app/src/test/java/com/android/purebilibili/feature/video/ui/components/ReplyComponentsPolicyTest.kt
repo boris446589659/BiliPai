@@ -30,6 +30,13 @@ import kotlin.test.assertTrue
 class ReplyComponentsPolicyTest {
 
     @Test
+    fun `sub reply preview opens its own floor while root opens thread top`() {
+        assertEquals(22L, resolveSubReplyOpenTargetId(rootReplyId = 11L, clickedReplyId = 22L))
+        assertEquals(0L, resolveSubReplyOpenTargetId(rootReplyId = 11L, clickedReplyId = 11L))
+        assertEquals(0L, resolveSubReplyOpenTargetId(rootReplyId = 11L, clickedReplyId = 0L))
+    }
+
+    @Test
     fun `resolveReplyLevelBadgeAsset keeps pili plus mapping for normal levels`() {
         assertEquals(
             ReplyLevelBadgeAsset.LEVEL_4,

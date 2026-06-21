@@ -604,7 +604,7 @@ private fun TabletSecondaryContent(
                                         showIdentityDecorations = showIdentityDecorations,
                                         isPinned = reply.rpid in commentState.pinnedReplyIds,
                                         onClick = {},
-                                        onSubClick = { commentViewModel.openSubReply(it) },
+                                        onSubClick = commentViewModel::openSubReply,
                                         onTimestampClick = { positionMs ->
                                             seekPlayerFromUserAction(playerState.player, positionMs)
                                         },

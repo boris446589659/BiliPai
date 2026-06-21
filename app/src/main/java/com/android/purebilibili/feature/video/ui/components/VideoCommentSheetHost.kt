@@ -754,9 +754,9 @@ internal fun VideoCommentMainList(
                             showIdentityDecorations = showIdentityDecorations,
                             isPinned = reply.rpid in state.pinnedReplyIds,
                             onClick = {},
-                            onSubClick = { parentReply ->
+                            onSubClick = { parentReply, targetReplyId ->
                                 if (shouldOpenPortraitCommentThreadDetail(useEmbeddedPresentation = true)) {
-                                    viewModel.openSubReply(parentReply)
+                                    viewModel.openSubReply(parentReply, targetReplyId)
                                 }
                             },
                             onTimestampClick = onTimestampClick,
