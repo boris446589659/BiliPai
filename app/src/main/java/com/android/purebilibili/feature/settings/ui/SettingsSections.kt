@@ -1665,6 +1665,7 @@ internal val AboutContributors = listOf(
 )
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun AboutProjectOverviewCard(
     versionName: String,
     contributors: List<AboutContributor> = AboutContributors
@@ -1712,7 +1713,7 @@ private fun AboutProjectOverviewCard(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "BiliPai 是专注于 B 站体验的第三方客户端，保留轻量、顺手和可持续维护的方向。",
+                    text = "BiliPai 想把看视频这件事做得安静一点：少打扰、少负担，也尽量把选择权留给你。",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1727,9 +1728,10 @@ private fun AboutProjectOverviewCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(18.dp)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 contributors.forEach { contributor ->
                     AboutContributorItem(contributor = contributor)
