@@ -12,6 +12,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.purebilibili.core.ui.blur.BlurIntensity
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeed
+import com.android.purebilibili.core.ui.transition.normalizeVideoSharedTransitionCustomDurationMillis
 import com.android.purebilibili.core.store.home.HomeSettingsStore
 import com.android.purebilibili.core.store.navigation.NavigationSettingsStore
 import com.android.purebilibili.core.store.player.PlayerSettingsStore
@@ -437,6 +440,9 @@ data class HomeSettings(
     val homeHeroCarouselAutoplayEnabled: Boolean = false,
     val cardAnimationEnabled: Boolean = false,    //  卡片进场动画（默认关闭）
     val cardTransitionEnabled: Boolean = true,    //  卡片过渡动画（默认开启）
+    val videoSharedTransitionSpeed: VideoSharedTransitionSpeed = VideoSharedTransitionSpeed.STANDARD,
+    val videoSharedTransitionCustomDurationMillis: Int =
+        VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS,
     val videoTransitionRealtimeBlurEnabled: Boolean = true, // 视频转场实时模糊（默认开启）
     val smartVisualGuardEnabled: Boolean = false, // [Retired] 智能流畅优先已下线，固定关闭
     val compactVideoStatsOnCover: Boolean = true, //  播放量/评论数显示在封面底部（默认开启）
@@ -1105,6 +1111,10 @@ object SettingsManager {
     private val KEY_CARD_ANIMATION_ENABLED = booleanPreferencesKey("card_animation_enabled")
     //  [新增] 卡片过渡动画开关
     private val KEY_CARD_TRANSITION_ENABLED = booleanPreferencesKey("card_transition_enabled")
+    private val KEY_VIDEO_SHARED_TRANSITION_SPEED =
+        intPreferencesKey("video_shared_transition_speed")
+    private val KEY_VIDEO_SHARED_TRANSITION_CUSTOM_DURATION_MILLIS =
+        intPreferencesKey("video_shared_transition_custom_duration_millis")
     //  [新增] 界面入场动画 master 开关(全 App 统一入场动效),默认开启
     private val KEY_UI_ENTRANCE_ANIMATION_ENABLED =
         booleanPreferencesKey("ui_entrance_animation_enabled")
@@ -1238,6 +1248,15 @@ object SettingsManager {
                 preferences[KEY_HOME_HERO_CAROUSEL_AUTOPLAY_ENABLED] ?: false,
             cardAnimationEnabled = preferences[KEY_CARD_ANIMATION_ENABLED] ?: false,
             cardTransitionEnabled = preferences[KEY_CARD_TRANSITION_ENABLED] ?: true,
+            videoSharedTransitionSpeed = VideoSharedTransitionSpeed.fromValue(
+                preferences[KEY_VIDEO_SHARED_TRANSITION_SPEED]
+                    ?: VideoSharedTransitionSpeed.STANDARD.value
+            ),
+            videoSharedTransitionCustomDurationMillis =
+                normalizeVideoSharedTransitionCustomDurationMillis(
+                    preferences[KEY_VIDEO_SHARED_TRANSITION_CUSTOM_DURATION_MILLIS]
+                        ?: VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS
+                ),
             videoTransitionRealtimeBlurEnabled =
                 preferences[KEY_VIDEO_TRANSITION_REALTIME_BLUR_ENABLED] ?: true,
             smartVisualGuardEnabled = false,
@@ -2241,6 +2260,45 @@ object SettingsManager {
 
     suspend fun setCardTransitionEnabled(context: Context, value: Boolean) {
         context.settingsDataStore.edit { preferences -> preferences[KEY_CARD_TRANSITION_ENABLED] = value }
+    }
+
+    fun getVideoSharedTransitionSpeed(context: Context): Flow<VideoSharedTransitionSpeed> =
+        context.settingsDataStore.data
+            .map { preferences ->
+                VideoSharedTransitionSpeed.fromValue(
+                    preferences[KEY_VIDEO_SHARED_TRANSITION_SPEED]
+                        ?: VideoSharedTransitionSpeed.STANDARD.value
+                )
+            }
+            .distinctUntilChanged()
+
+    suspend fun setVideoSharedTransitionSpeed(
+        context: Context,
+        speed: VideoSharedTransitionSpeed
+    ) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_VIDEO_SHARED_TRANSITION_SPEED] = speed.value
+        }
+    }
+
+    fun getVideoSharedTransitionCustomDurationMillis(context: Context): Flow<Int> =
+        context.settingsDataStore.data
+            .map { preferences ->
+                normalizeVideoSharedTransitionCustomDurationMillis(
+                    preferences[KEY_VIDEO_SHARED_TRANSITION_CUSTOM_DURATION_MILLIS]
+                        ?: VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS
+                )
+            }
+            .distinctUntilChanged()
+
+    suspend fun setVideoSharedTransitionCustomDurationMillis(
+        context: Context,
+        durationMillis: Int
+    ) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_VIDEO_SHARED_TRANSITION_CUSTOM_DURATION_MILLIS] =
+                normalizeVideoSharedTransitionCustomDurationMillis(durationMillis)
+        }
     }
 
     //  [新增] --- 界面入场动画 master 开关(全 App 统一入场动效) ---
@@ -5811,6 +5869,11 @@ object SettingsManager {
             BooleanShareablePreferenceDefinition(KEY_CARD_ANIMATION_ENABLED, SettingsShareSection.APPEARANCE),
             BooleanShareablePreferenceDefinition(KEY_UI_ENTRANCE_ANIMATION_ENABLED, SettingsShareSection.APPEARANCE),
             BooleanShareablePreferenceDefinition(KEY_CARD_TRANSITION_ENABLED, SettingsShareSection.APPEARANCE),
+            IntShareablePreferenceDefinition(KEY_VIDEO_SHARED_TRANSITION_SPEED, SettingsShareSection.APPEARANCE),
+            IntShareablePreferenceDefinition(
+                KEY_VIDEO_SHARED_TRANSITION_CUSTOM_DURATION_MILLIS,
+                SettingsShareSection.APPEARANCE
+            ),
             BooleanShareablePreferenceDefinition(
                 KEY_VIDEO_TRANSITION_REALTIME_BLUR_ENABLED,
                 SettingsShareSection.APPEARANCE

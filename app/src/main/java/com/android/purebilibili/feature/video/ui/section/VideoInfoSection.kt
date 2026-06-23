@@ -58,6 +58,7 @@ import com.android.purebilibili.core.ui.OfficialVerifyBadge
 import com.android.purebilibili.core.ui.components.resolveUpStatsText
 import com.android.purebilibili.core.ui.components.UserUpBadge
 import com.android.purebilibili.core.ui.resolveOfficialVerifyBadgeFromRole
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoMetadataSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
@@ -333,9 +334,14 @@ fun VideoTitleWithDesc(
         coverSharedEnabled = coverSharedEnabled,
         isQuickReturnLimited = isQuickReturnLimitedForSharedElements
     )
-    val metadataSharedTransitionMotionSpec = remember(metadataSharedEnabled) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val metadataSharedTransitionMotionSpec = remember(
+        metadataSharedEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoMetadataSharedTransitionMotionSpec(
-            transitionEnabled = metadataSharedEnabled
+            transitionEnabled = metadataSharedEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     
@@ -691,9 +697,14 @@ fun UpInfoSection(
         coverSharedEnabled = coverSharedEnabled,
         isQuickReturnLimited = isQuickReturnLimitedForSharedElements
     )
-    val metadataSharedTransitionMotionSpec = remember(metadataSharedEnabled) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val metadataSharedTransitionMotionSpec = remember(
+        metadataSharedEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoMetadataSharedTransitionMotionSpec(
-            transitionEnabled = metadataSharedEnabled
+            transitionEnabled = metadataSharedEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val upStatsText = resolveUpStatsText(

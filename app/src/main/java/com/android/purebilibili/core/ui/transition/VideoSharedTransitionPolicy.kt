@@ -4,6 +4,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
+import kotlin.math.roundToInt
 
 internal enum class VideoSharedTransitionProfile {
     COVER_ONLY,
@@ -24,10 +25,16 @@ internal enum class VideoSharedTransitionTargetMode {
 
 internal const val VIDEO_SHARED_COVER_ASPECT_RATIO = 16f / 10f
 private const val HOME_SOURCE_ROUTE = "home"
-internal const val HOME_SHARED_TRANSITION_DURATION_MILLIS = 360
-internal const val FULLSCREEN_SHARED_TRANSITION_DURATION_MILLIS = 420
+internal const val VIDEO_SHARED_TRANSITION_FAST_DURATION_MILLIS = 360
+internal const val VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS = 460
+internal const val VIDEO_SHARED_TRANSITION_SLOW_DURATION_MILLIS = 560
+internal const val VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS = 280
+internal const val VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS = 900
+internal const val VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS =
+    VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS
 private const val HOME_DETAIL_REVEAL_DELAY_MILLIS = 40
-private const val HOME_DETAIL_REVEAL_DURATION_MILLIS = 220
+private const val HOME_DETAIL_REVEAL_MIN_DURATION_MILLIS = 220
+private const val HOME_DETAIL_REVEAL_MAX_DURATION_MILLIS = 360
 private const val HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP = 14
 private const val HOME_DETAIL_REVEAL_INITIAL_SCALE = 0.985f
 private const val HOME_SHARED_TRANSITION_CARD_CORNER_DP = 16
@@ -36,7 +43,24 @@ private const val DEFAULT_VIDEO_CARD_CORNER_DP = 12
 private const val DEFAULT_VIDEO_PLAYER_CORNER_DP = 12
 private const val DYNAMIC_VIDEO_CARD_CORNER_DP = 10
 private const val WATCH_LATER_VIDEO_CARD_CORNER_DP = 8
-private val VIDEO_CARD_IOS_LIKE_EASE_OUT = CubicBezierEasing(0.22f, 0.8f, 0.24f, 1f)
+private val VIDEO_CARD_IOS_LIKE_EASE_OUT = CubicBezierEasing(0.18f, 0.76f, 0.22f, 1f)
+
+enum class VideoSharedTransitionSpeed(val value: Int, val label: String) {
+    FAST(0, "快速"),
+    STANDARD(1, "标准"),
+    SLOW(2, "慢速"),
+    CUSTOM(3, "自定义");
+
+    companion object {
+        fun fromValue(value: Int): VideoSharedTransitionSpeed =
+            entries.find { it.value == value } ?: STANDARD
+    }
+}
+
+internal data class VideoSharedTransitionSpeedSettings(
+    val speed: VideoSharedTransitionSpeed = VideoSharedTransitionSpeed.STANDARD,
+    val customDurationMillis: Int = VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS
+)
 
 internal data class VideoSharedTransitionOwnership(
     val useCoverSharedBounds: Boolean,
@@ -46,6 +70,7 @@ internal data class VideoSharedTransitionOwnership(
 internal data class VideoSharedTransitionMotionSpec(
     val enabled: Boolean,
     val durationMillis: Int,
+    val fullscreenDurationMillis: Int,
     val contentDelayMillis: Int,
     val contentDurationMillis: Int,
     val contentSlideOffsetDp: Int,
@@ -74,6 +99,36 @@ internal fun resolveVideoSharedTransitionProfile(): VideoSharedTransitionProfile
 
 internal fun resolveVideoCardSharedTransitionEasing(): Easing {
     return VIDEO_CARD_IOS_LIKE_EASE_OUT
+}
+
+internal fun normalizeVideoSharedTransitionCustomDurationMillis(durationMillis: Int): Int {
+    return durationMillis.coerceIn(
+        VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS,
+        VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS
+    )
+}
+
+internal fun resolveVideoSharedTransitionDurationMillis(
+    speedSettings: VideoSharedTransitionSpeedSettings
+): Int {
+    return when (speedSettings.speed) {
+        VideoSharedTransitionSpeed.FAST -> VIDEO_SHARED_TRANSITION_FAST_DURATION_MILLIS
+        VideoSharedTransitionSpeed.STANDARD -> VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS
+        VideoSharedTransitionSpeed.SLOW -> VIDEO_SHARED_TRANSITION_SLOW_DURATION_MILLIS
+        VideoSharedTransitionSpeed.CUSTOM ->
+            normalizeVideoSharedTransitionCustomDurationMillis(speedSettings.customDurationMillis)
+    }
+}
+
+internal fun resolveVideoSharedTransitionFullscreenDurationMillis(durationMillis: Int): Int {
+    return durationMillis + 80
+}
+
+internal fun resolveVideoSharedTransitionContentDurationMillis(durationMillis: Int): Int {
+    return (durationMillis * 0.6f).roundToInt().coerceIn(
+        HOME_DETAIL_REVEAL_MIN_DURATION_MILLIS,
+        HOME_DETAIL_REVEAL_MAX_DURATION_MILLIS
+    )
 }
 
 internal fun resolveVideoSharedTransitionSourceCornerDp(
@@ -185,7 +240,8 @@ internal fun resolveVideoSharedTransitionOwnership(
 
 internal fun resolveVideoCardSharedTransitionMotionSpec(
     sourceRoute: String?,
-    transitionEnabled: Boolean
+    transitionEnabled: Boolean,
+    speedSettings: VideoSharedTransitionSpeedSettings = VideoSharedTransitionSpeedSettings()
 ): VideoSharedTransitionMotionSpec {
     val enabled = transitionEnabled &&
         !sourceRoute?.substringBefore("?").isNullOrBlank()
@@ -193,6 +249,7 @@ internal fun resolveVideoCardSharedTransitionMotionSpec(
         return VideoSharedTransitionMotionSpec(
             enabled = false,
             durationMillis = 0,
+            fullscreenDurationMillis = 0,
             contentDelayMillis = 0,
             contentDurationMillis = 0,
             contentSlideOffsetDp = 0,
@@ -200,12 +257,14 @@ internal fun resolveVideoCardSharedTransitionMotionSpec(
             easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
         )
     }
+    val durationMillis = resolveVideoSharedTransitionDurationMillis(speedSettings)
 
     return VideoSharedTransitionMotionSpec(
         enabled = true,
-        durationMillis = HOME_SHARED_TRANSITION_DURATION_MILLIS,
+        durationMillis = durationMillis,
+        fullscreenDurationMillis = resolveVideoSharedTransitionFullscreenDurationMillis(durationMillis),
         contentDelayMillis = HOME_DETAIL_REVEAL_DELAY_MILLIS,
-        contentDurationMillis = HOME_DETAIL_REVEAL_DURATION_MILLIS,
+        contentDurationMillis = resolveVideoSharedTransitionContentDurationMillis(durationMillis),
         contentSlideOffsetDp = HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP,
         contentInitialScale = HOME_DETAIL_REVEAL_INITIAL_SCALE,
         easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
@@ -213,13 +272,24 @@ internal fun resolveVideoCardSharedTransitionMotionSpec(
 }
 
 internal fun resolveVideoMetadataSharedTransitionMotionSpec(
-    transitionEnabled: Boolean
+    transitionEnabled: Boolean,
+    speedSettings: VideoSharedTransitionSpeedSettings = VideoSharedTransitionSpeedSettings()
 ): VideoSharedTransitionMotionSpec {
+    val durationMillis = if (transitionEnabled) {
+        resolveVideoSharedTransitionDurationMillis(speedSettings)
+    } else {
+        0
+    }
     return VideoSharedTransitionMotionSpec(
         enabled = transitionEnabled,
-        durationMillis = if (transitionEnabled) HOME_SHARED_TRANSITION_DURATION_MILLIS else 0,
+        durationMillis = durationMillis,
+        fullscreenDurationMillis = if (transitionEnabled) {
+            resolveVideoSharedTransitionFullscreenDurationMillis(durationMillis)
+        } else {
+            0
+        },
         contentDelayMillis = 0,
-        contentDurationMillis = if (transitionEnabled) HOME_SHARED_TRANSITION_DURATION_MILLIS else 0,
+        contentDurationMillis = durationMillis,
         contentSlideOffsetDp = 0,
         contentInitialScale = 1f,
         easing = VIDEO_CARD_IOS_LIKE_EASE_OUT

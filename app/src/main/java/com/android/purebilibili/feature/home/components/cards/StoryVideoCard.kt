@@ -54,6 +54,7 @@ import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.components.UpBadgeName
 import com.android.purebilibili.core.ui.components.resolveUpStatsText
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
@@ -181,6 +182,7 @@ fun StoryVideoCard(
     //  尝试获取共享元素作用域
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
     val effectiveTransitionEnabled = transitionEnabled && LocalSharedTransitionEnabled.current
     val coverSharedEnabled = shouldEnableVideoCoverSharedTransition(
         transitionEnabled = effectiveTransitionEnabled,
@@ -192,10 +194,15 @@ fun StoryVideoCard(
         coverSharedEnabled = coverSharedEnabled,
         isQuickReturnLimited = isQuickReturnLimited
     )
-    val cardSharedTransitionMotionSpec = remember(effectiveSharedElementSourceRoute, effectiveTransitionEnabled) {
+    val cardSharedTransitionMotionSpec = remember(
+        effectiveSharedElementSourceRoute,
+        effectiveTransitionEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = effectiveSharedElementSourceRoute,
-            transitionEnabled = effectiveTransitionEnabled
+            transitionEnabled = effectiveTransitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     

@@ -159,6 +159,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEasing
@@ -1146,10 +1147,16 @@ fun VideoDetailScreen(
     val motionSpec = remember(transitionEnterDurationMillis) {
         resolveVideoDetailMotionSpec(transitionEnterDurationMillis)
     }
-    val homeSharedTransitionMotionSpec = remember(sourceRouteForSharedElement, transitionEnabled) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val homeSharedTransitionMotionSpec = remember(
+        sourceRouteForSharedElement,
+        transitionEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sourceRouteForSharedElement,
-            transitionEnabled = transitionEnabled
+            transitionEnabled = transitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val sharedTransitionSourceCornerDp = remember(sourceRouteForSharedElement) {
@@ -3401,7 +3408,11 @@ fun VideoDetailScreen(
                                         animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                                         boundsTransform = { _, _ ->
                                             if (homeSharedTransitionMotionSpec.enabled) {
-                                                val duration = if (isFullscreenTarget) com.android.purebilibili.core.ui.transition.FULLSCREEN_SHARED_TRANSITION_DURATION_MILLIS else homeSharedTransitionMotionSpec.durationMillis
+                                                val duration = if (isFullscreenTarget) {
+                                                    homeSharedTransitionMotionSpec.fullscreenDurationMillis
+                                                } else {
+                                                    homeSharedTransitionMotionSpec.durationMillis
+                                                }
                                                 tween(
                                                     durationMillis = duration,
                                                     easing = homeSharedTransitionMotionSpec.easing

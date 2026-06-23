@@ -35,6 +35,7 @@ import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.components.UpBadgeName
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
@@ -153,10 +154,12 @@ fun RelatedVideoItem(
     val sourceRoute = resolveRelatedVideoSharedElementSourceRoute(
         LocalVideoCardSharedElementSourceRoute.current
     )
-    val cardSharedTransitionMotionSpec = remember(sourceRoute, transitionEnabled) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val cardSharedTransitionMotionSpec = remember(sourceRoute, transitionEnabled, sharedTransitionSpeedSettings) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sourceRoute,
-            transitionEnabled = transitionEnabled
+            transitionEnabled = transitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val cardBoundsRef = remember { object { var value: Rect? = null } }

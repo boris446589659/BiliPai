@@ -66,6 +66,7 @@ import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.components.UpBadgeName
 import com.android.purebilibili.core.ui.components.resolveUpStatsText
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
@@ -558,6 +559,7 @@ fun ElegantVideoCard(
         //  尝试获取共享元素作用域。首页点击视频时，由卡片主容器承载整体放大/回收。
         val sharedTransitionScope = LocalSharedTransitionScope.current
         val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+        val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
         val effectiveTransitionEnabled = transitionEnabled && LocalSharedTransitionEnabled.current
         val coverSharedEnabled = shouldEnableVideoCoverSharedTransition(
             transitionEnabled = effectiveTransitionEnabled,
@@ -573,12 +575,14 @@ fun ElegantVideoCard(
         val homeSharedTransitionSpecs = remember(
             effectiveSharedElementSourceRoute,
             effectiveTransitionEnabled,
-            cardCornerRadius
+            cardCornerRadius,
+            sharedTransitionSpeedSettings
         ) {
             VideoCardSharedTransitionSpecs(
                 motion = resolveVideoCardSharedTransitionMotionSpec(
                     sourceRoute = effectiveSharedElementSourceRoute,
-                    transitionEnabled = effectiveTransitionEnabled
+                    transitionEnabled = effectiveTransitionEnabled,
+                    speedSettings = sharedTransitionSpeedSettings
                 ),
                 visual = resolveVideoSharedTransitionVisualSpec(
                     sourceRoute = effectiveSharedElementSourceRoute,

@@ -101,21 +101,82 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoCardSharedTransitionMotion_usesShortCoverPrimaryTimeline() {
+    fun videoCardSharedTransitionMotion_usesStandardCoverPrimaryTimelineByDefault() {
         val motion = resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = "home",
             transitionEnabled = true
         )
 
         assertTrue(motion.enabled)
-        assertEquals(360, motion.durationMillis)
+        assertEquals(460, motion.durationMillis)
+        assertEquals(540, motion.fullscreenDurationMillis)
         assertEquals(40, motion.contentDelayMillis)
-        assertEquals(220, motion.contentDurationMillis)
+        assertEquals(276, motion.contentDurationMillis)
         assertEquals(14, motion.contentSlideOffsetDp)
         assertEquals(0.985f, motion.contentInitialScale, 0.0001f)
         assertTrue(motion.easing.transform(0.35f) > 0.7f)
         assertTrue(motion.easing.transform(0.35f) < 0.9f)
         assertTrue(motion.easing.transform(0.75f) > 0.96f)
+    }
+
+    @Test
+    fun videoCardSharedTransitionMotion_preservesFastTimelineOption() {
+        val motion = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true,
+            speedSettings = VideoSharedTransitionSpeedSettings(VideoSharedTransitionSpeed.FAST)
+        )
+
+        assertEquals(360, motion.durationMillis)
+        assertEquals(440, motion.fullscreenDurationMillis)
+        assertEquals(220, motion.contentDurationMillis)
+    }
+
+    @Test
+    fun videoCardSharedTransitionMotion_supportsSlowTimelineOption() {
+        val motion = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true,
+            speedSettings = VideoSharedTransitionSpeedSettings(VideoSharedTransitionSpeed.SLOW)
+        )
+
+        assertEquals(560, motion.durationMillis)
+        assertEquals(640, motion.fullscreenDurationMillis)
+        assertEquals(336, motion.contentDurationMillis)
+    }
+
+    @Test
+    fun videoCardSharedTransitionMotion_supportsClampedCustomTimeline() {
+        val low = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true,
+            speedSettings = VideoSharedTransitionSpeedSettings(
+                speed = VideoSharedTransitionSpeed.CUSTOM,
+                customDurationMillis = 120
+            )
+        )
+        val custom = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true,
+            speedSettings = VideoSharedTransitionSpeedSettings(
+                speed = VideoSharedTransitionSpeed.CUSTOM,
+                customDurationMillis = 620
+            )
+        )
+        val high = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true,
+            speedSettings = VideoSharedTransitionSpeedSettings(
+                speed = VideoSharedTransitionSpeed.CUSTOM,
+                customDurationMillis = 1200
+            )
+        )
+
+        assertEquals(280, low.durationMillis)
+        assertEquals(620, custom.durationMillis)
+        assertEquals(700, custom.fullscreenDurationMillis)
+        assertEquals(360, custom.contentDurationMillis)
+        assertEquals(900, high.durationMillis)
     }
 
     @Test
@@ -130,6 +191,7 @@ class VideoSharedTransitionPolicyTest {
 
         assertTrue(metadataMotion.enabled)
         assertEquals(coverMotion.durationMillis, metadataMotion.durationMillis)
+        assertEquals(coverMotion.fullscreenDurationMillis, metadataMotion.fullscreenDurationMillis)
         assertEquals(0, metadataMotion.contentDelayMillis)
         assertSame(coverMotion.easing, metadataMotion.easing)
     }
@@ -158,7 +220,7 @@ class VideoSharedTransitionPolicyTest {
         )
 
         assertTrue(motion.enabled)
-        assertEquals(360, motion.durationMillis)
+        assertEquals(460, motion.durationMillis)
     }
 
     @Test

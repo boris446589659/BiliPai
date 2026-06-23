@@ -23,6 +23,8 @@ import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.UiPreset
 import com.android.purebilibili.core.theme.syncThemeRoleControlAccent
 import com.android.purebilibili.core.ui.blur.BlurIntensity
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeed
 import com.android.purebilibili.core.util.CacheClearTarget
 import com.android.purebilibili.core.util.CacheUtils
 import com.materialkolor.PaletteStyle
@@ -66,6 +68,9 @@ data class SettingsUiState(
     val displayMode: Int = 0,
     val cardAnimationEnabled: Boolean = false,     //  卡片进场动画（默认关闭）
     val cardTransitionEnabled: Boolean = false,    //  卡片过渡动画（默认关闭）
+    val videoSharedTransitionSpeed: VideoSharedTransitionSpeed = VideoSharedTransitionSpeed.STANDARD,
+    val videoSharedTransitionCustomDurationMillis: Int =
+        VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS,
     val videoTransitionRealtimeBlurEnabled: Boolean = true,
     val smartVisualGuardEnabled: Boolean = false, // [Retired] 智能流畅优先已下线
     val cacheSize: String = "计算中...",
@@ -137,6 +142,8 @@ data class ExtraSettings(
     val displayMode: Int,
     val cardAnimationEnabled: Boolean,
     val cardTransitionEnabled: Boolean,
+    val videoSharedTransitionSpeed: VideoSharedTransitionSpeed,
+    val videoSharedTransitionCustomDurationMillis: Int,
     val videoTransitionRealtimeBlurEnabled: Boolean,
     val smartVisualGuardEnabled: Boolean,
     val hapticFeedbackEnabled: Boolean, // [Restored]
@@ -200,6 +207,8 @@ private data class BaseSettings(
     val displayMode: Int, //  新增
     val cardAnimationEnabled: Boolean, //  卡片进场动画
     val cardTransitionEnabled: Boolean, //  卡片过渡动画
+    val videoSharedTransitionSpeed: VideoSharedTransitionSpeed,
+    val videoSharedTransitionCustomDurationMillis: Int,
     val videoTransitionRealtimeBlurEnabled: Boolean,
     val smartVisualGuardEnabled: Boolean, // [New]
     val hapticFeedbackEnabled: Boolean, // [新增]
@@ -304,6 +313,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         SettingsManager.getDisplayMode(context).asAnyFlow(),
         SettingsManager.getCardAnimationEnabled(context).asAnyFlow(), // [Restored]
         SettingsManager.getCardTransitionEnabled(context).asAnyFlow(),
+        SettingsManager.getVideoSharedTransitionSpeed(context).asAnyFlow(),
+        SettingsManager.getVideoSharedTransitionCustomDurationMillis(context).asAnyFlow(),
         SettingsManager.getVideoTransitionRealtimeBlurEnabled(context).asAnyFlow(),
         SettingsManager.getSmartVisualGuardEnabled(context).asAnyFlow(), // [New]
         SettingsManager.getHapticFeedbackEnabled(context).asAnyFlow(), // [新增]
@@ -328,24 +339,26 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         val displayMode = values[2] as Int
         val cardAnimation = values[3] as Boolean
         val cardTransition = values[4] as Boolean
-        val videoTransitionRealtimeBlur = values[5] as Boolean
-        val smartVisualGuard = values[6] as Boolean
-        val hapticFeedback = values[7] as Boolean
-        val topBarLiquidGlass = values[8] as Boolean
-        val homeSearchLiquidGlass = values[9] as Boolean
-        val bottomBarLiquidGlass = values[10] as Boolean
-        val bottomBarSearch = values[11] as Boolean
-        val bottomBarSearchAutoExpandMode = values[12] as BottomBarSearchAutoExpandMode
-        val bottomBarSearchLayoutMode = values[13] as BottomBarSearchLayoutMode
-        val androidNativeLiquidGlass = values[14] as Boolean
-        val liquidGlassStyle = values[15] as com.android.purebilibili.core.store.LiquidGlassStyle
-        val liquidGlassMode = values[16] as LiquidGlassMode
-        val liquidGlassStrength = values[17] as Float
-        val liquidGlassProgress = values[18] as Float
-        val tabletUseSidebar = values[19] as Boolean
-        val headerCollapse = values[20] as Boolean
-        val gridColumnCount = values[21] as Int
-        val homeFeedCardWidthPreset = values[22] as HomeFeedCardWidthPreset
+        val videoSharedTransitionSpeed = values[5] as VideoSharedTransitionSpeed
+        val videoSharedTransitionCustomDurationMillis = values[6] as Int
+        val videoTransitionRealtimeBlur = values[7] as Boolean
+        val smartVisualGuard = values[8] as Boolean
+        val hapticFeedback = values[9] as Boolean
+        val topBarLiquidGlass = values[10] as Boolean
+        val homeSearchLiquidGlass = values[11] as Boolean
+        val bottomBarLiquidGlass = values[12] as Boolean
+        val bottomBarSearch = values[13] as Boolean
+        val bottomBarSearchAutoExpandMode = values[14] as BottomBarSearchAutoExpandMode
+        val bottomBarSearchLayoutMode = values[15] as BottomBarSearchLayoutMode
+        val androidNativeLiquidGlass = values[16] as Boolean
+        val liquidGlassStyle = values[17] as com.android.purebilibili.core.store.LiquidGlassStyle
+        val liquidGlassMode = values[18] as LiquidGlassMode
+        val liquidGlassStrength = values[19] as Float
+        val liquidGlassProgress = values[20] as Float
+        val tabletUseSidebar = values[21] as Boolean
+        val headerCollapse = values[22] as Boolean
+        val gridColumnCount = values[23] as Int
+        val homeFeedCardWidthPreset = values[24] as HomeFeedCardWidthPreset
         
         data class Ui2(
             val f: Boolean,
@@ -353,6 +366,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val d: Int,
             val ca: Boolean,
             val ct: Boolean,
+            val vsts: VideoSharedTransitionSpeed,
+            val vstcdm: Int,
             val vtrb: Boolean,
             val svg: Boolean,
             val h: Boolean,
@@ -378,6 +393,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode,
             cardAnimation,
             cardTransition,
+            videoSharedTransitionSpeed,
+            videoSharedTransitionCustomDurationMillis,
             videoTransitionRealtimeBlur,
             smartVisualGuard,
             hapticFeedback,
@@ -416,6 +433,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode = ui2.d,
             cardAnimationEnabled = ui2.ca,
             cardTransitionEnabled = ui2.ct,
+            videoSharedTransitionSpeed = ui2.vsts,
+            videoSharedTransitionCustomDurationMillis = ui2.vstcdm,
             videoTransitionRealtimeBlurEnabled = ui2.vtrb,
             smartVisualGuardEnabled = ui2.svg,
             hapticFeedbackEnabled = ui2.h, // [新增]
@@ -508,6 +527,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode = extra.displayMode,
             cardAnimationEnabled = extra.cardAnimationEnabled,
             cardTransitionEnabled = extra.cardTransitionEnabled,
+            videoSharedTransitionSpeed = extra.videoSharedTransitionSpeed,
+            videoSharedTransitionCustomDurationMillis =
+                extra.videoSharedTransitionCustomDurationMillis,
             videoTransitionRealtimeBlurEnabled = extra.videoTransitionRealtimeBlurEnabled,
             smartVisualGuardEnabled = extra.smartVisualGuardEnabled,
             hapticFeedbackEnabled = extra.hapticFeedbackEnabled, // [新增]
@@ -569,6 +591,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             displayMode = settings.displayMode,
             cardAnimationEnabled = settings.cardAnimationEnabled,
             cardTransitionEnabled = settings.cardTransitionEnabled,
+            videoSharedTransitionSpeed = settings.videoSharedTransitionSpeed,
+            videoSharedTransitionCustomDurationMillis =
+                settings.videoSharedTransitionCustomDurationMillis,
             videoTransitionRealtimeBlurEnabled = settings.videoTransitionRealtimeBlurEnabled,
             smartVisualGuardEnabled = settings.smartVisualGuardEnabled,
             hapticFeedbackEnabled = settings.hapticFeedbackEnabled, // [新增]
@@ -805,6 +830,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     
     //  [新增] 卡片过渡动画开关
     fun toggleCardTransition(value: Boolean) { viewModelScope.launch { SettingsManager.setCardTransitionEnabled(context, value) } }
+
+    fun setVideoSharedTransitionSpeed(speed: VideoSharedTransitionSpeed) {
+        viewModelScope.launch {
+            SettingsManager.setVideoSharedTransitionSpeed(context, speed)
+        }
+    }
+
+    fun setVideoSharedTransitionCustomDurationMillis(durationMillis: Int) {
+        viewModelScope.launch {
+            SettingsManager.setVideoSharedTransitionCustomDurationMillis(context, durationMillis)
+        }
+    }
 
     fun toggleVideoTransitionRealtimeBlur(value: Boolean) {
         viewModelScope.launch {

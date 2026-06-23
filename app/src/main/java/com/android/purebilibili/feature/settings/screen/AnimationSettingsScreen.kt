@@ -36,6 +36,10 @@ import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.adaptive.resolveDeviceUiProfile
 import com.android.purebilibili.core.ui.globalWallpaperAwareChromeColor
 import com.android.purebilibili.core.ui.rememberAppBackIcon
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeed
+import com.android.purebilibili.core.ui.transition.normalizeVideoSharedTransitionCustomDurationMillis
 import com.android.purebilibili.core.util.LocalWindowSizeClass
 import com.android.purebilibili.feature.home.components.LiquidGlassTuning
 import com.android.purebilibili.feature.home.components.resolveLiquidGlassTuning
@@ -51,6 +55,7 @@ import android.os.Build
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar as MiuixSmallTopAppBar
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.roundToInt
 
 /**
  *  动画与效果设置二级页面
@@ -149,6 +154,23 @@ fun AnimationSettingsContent(
     val effectiveEntranceSpec = rememberEffectiveEntranceMotionSpec()
     // 开关开着、但有效参数被降级为不动画 → 系统减弱动效在生效。
     val entranceDowngradedBySystem = uiEntranceAnimationEnabled && !effectiveEntranceSpec.animate
+    val sharedTransitionSpeedOptions = remember {
+        listOf(
+            PlaybackSegmentOption(VideoSharedTransitionSpeed.FAST, "快速"),
+            PlaybackSegmentOption(VideoSharedTransitionSpeed.STANDARD, "标准"),
+            PlaybackSegmentOption(VideoSharedTransitionSpeed.SLOW, "慢速"),
+            PlaybackSegmentOption(VideoSharedTransitionSpeed.CUSTOM, "自定")
+        )
+    }
+    var customTransitionDurationMillis by remember(state.videoSharedTransitionCustomDurationMillis) {
+        mutableStateOf(state.videoSharedTransitionCustomDurationMillis)
+    }
+    fun snapCustomTransitionDuration(value: Float): Int {
+        val stepMillis = 20
+        val min = VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS
+        val snapped = min + (((value - min) / stepMillis).roundToInt() * stepMillis)
+        return normalizeVideoSharedTransitionCustomDurationMillis(snapped)
+    }
     LaunchedEffect(focusRequest?.token) {
         val request = focusRequest ?: return@LaunchedEffect
         if (request.target != SettingsSearchTarget.ANIMATION) return@LaunchedEffect
@@ -229,6 +251,53 @@ fun AnimationSettingsContent(
                             onCheckedChange = { viewModel.toggleCardTransition(it) },
                             iconTint = iOSTeal
                         )
+                        IOSDivider()
+                        IOSSlidingSegmentedSetting(
+                            title = "共享元素速度：${state.videoSharedTransitionSpeed.label}",
+                            subtitle = "先快后慢的统一曲线；自定义只调整时长",
+                            options = sharedTransitionSpeedOptions,
+                            selectedValue = state.videoSharedTransitionSpeed,
+                            onSelectionChange = viewModel::setVideoSharedTransitionSpeed
+                        )
+                        if (state.videoSharedTransitionSpeed == VideoSharedTransitionSpeed.CUSTOM) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "自定义时长",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${customTransitionDurationMillis}ms",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Slider(
+                                    value = customTransitionDurationMillis.toFloat(),
+                                    onValueChange = { value ->
+                                        customTransitionDurationMillis = snapCustomTransitionDuration(value)
+                                    },
+                                    onValueChangeFinished = {
+                                        viewModel.setVideoSharedTransitionCustomDurationMillis(
+                                            customTransitionDurationMillis
+                                        )
+                                    },
+                                    valueRange = VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS.toFloat()..
+                                        VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS.toFloat(),
+                                    steps = 30
+                                )
+                            }
+                        }
                         IOSDivider()
                         Column(
                             modifier = Modifier

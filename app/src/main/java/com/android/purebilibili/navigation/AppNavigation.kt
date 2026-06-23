@@ -86,6 +86,8 @@ import com.android.purebilibili.core.ui.SharedTransitionProvider
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeedSettings
 import com.android.purebilibili.data.model.response.BgmInfo
 
 import androidx.compose.ui.zIndex
@@ -372,6 +374,12 @@ fun AppNavigation(
     val startDestination = if (firstLaunchShown) ScreenRoutes.Home.route else ScreenRoutes.Onboarding.route
 
     SharedTransitionProvider(enabled = cardTransitionEnabled) {
+        CompositionLocalProvider(
+            LocalVideoSharedTransitionSpeedSettings provides VideoSharedTransitionSpeedSettings(
+                speed = homeSettings.videoSharedTransitionSpeed,
+                customDurationMillis = homeSettings.videoSharedTransitionCustomDurationMillis
+            )
+        ) {
         // [新增] 全局底栏状态管理
         var navigation3BackStack by remember(startDestination) {
             mutableStateOf(
@@ -2391,10 +2399,11 @@ fun AppNavigation(
                                     }
                                 }
                             )
-                        }
-                    }
             }
         }
+        }
+    }
+}
 
             // 在 NavDisplay 之后注册经典回退拦截器，由应用壳接管返回动作。
             BackHandler(enabled = shouldInterceptSystemBack) {

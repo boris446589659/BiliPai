@@ -42,6 +42,7 @@ import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionEnabled
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
@@ -102,15 +103,21 @@ fun VideoCardLarge(
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val sharedTransitionEnabled = LocalSharedTransitionEnabled.current
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
     val sharedElementReady = sharedTransitionEnabled &&
         archive.bvid.isNotBlank() &&
         sourceRoute != null &&
         sharedTransitionScope != null &&
         animatedVisibilityScope != null
-    val sharedTransitionMotionSpec = remember(sourceRoute, sharedTransitionEnabled) {
+    val sharedTransitionMotionSpec = remember(
+        sourceRoute,
+        sharedTransitionEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sourceRoute,
-            transitionEnabled = sharedTransitionEnabled
+            transitionEnabled = sharedTransitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val effectiveSharedElementKey = if (sharedElementReady) {

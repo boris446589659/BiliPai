@@ -5,6 +5,10 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeed
 import com.android.purebilibili.core.theme.UiPreset
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,6 +55,11 @@ class HomeSettingsMappingPolicyTest {
         assertEquals(HomeFeedCardWidthPreset.AUTO, result.homeFeedCardWidthPreset)
         assertFalse(result.cardAnimationEnabled)
         assertTrue(result.cardTransitionEnabled)
+        assertEquals(VideoSharedTransitionSpeed.STANDARD, result.videoSharedTransitionSpeed)
+        assertEquals(
+            VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS,
+            result.videoSharedTransitionCustomDurationMillis
+        )
         assertTrue(result.videoTransitionRealtimeBlurEnabled)
         assertFalse(result.smartVisualGuardEnabled)
         assertTrue(result.compactVideoStatsOnCover)
@@ -94,6 +103,8 @@ class HomeSettingsMappingPolicyTest {
             intPreferencesKey("home_feed_card_style") to HomeFeedCardStyle.OFFICIAL.value,
             booleanPreferencesKey("card_animation_enabled") to true,
             booleanPreferencesKey("card_transition_enabled") to false,
+            intPreferencesKey("video_shared_transition_speed") to VideoSharedTransitionSpeed.CUSTOM.value,
+            intPreferencesKey("video_shared_transition_custom_duration_millis") to 620,
             booleanPreferencesKey("video_transition_realtime_blur_enabled") to false,
             booleanPreferencesKey("smart_visual_guard_enabled") to false,
             booleanPreferencesKey("compact_video_stats_on_cover") to false,
@@ -142,6 +153,8 @@ class HomeSettingsMappingPolicyTest {
         assertEquals(HomeFeedCardWidthPreset.WIDE, result.homeFeedCardWidthPreset)
         assertTrue(result.cardAnimationEnabled)
         assertFalse(result.cardTransitionEnabled)
+        assertEquals(VideoSharedTransitionSpeed.CUSTOM, result.videoSharedTransitionSpeed)
+        assertEquals(620, result.videoSharedTransitionCustomDurationMillis)
         assertFalse(result.videoTransitionRealtimeBlurEnabled)
         assertFalse(result.smartVisualGuardEnabled)
         assertFalse(result.compactVideoStatsOnCover)
@@ -164,6 +177,36 @@ class HomeSettingsMappingPolicyTest {
         val result = mapHomeSettingsFromPreferences(prefs)
 
         assertEquals(HomeFeedCardWidthPreset.AUTO, result.homeFeedCardWidthPreset)
+    }
+
+    @Test
+    fun invalidVideoSharedTransitionSpeedFallsBackToStandard() {
+        val prefs = mutablePreferencesOf(
+            intPreferencesKey("video_shared_transition_speed") to 99
+        )
+
+        val result = mapHomeSettingsFromPreferences(prefs)
+
+        assertEquals(VideoSharedTransitionSpeed.STANDARD, result.videoSharedTransitionSpeed)
+    }
+
+    @Test
+    fun videoSharedTransitionCustomDurationIsClamped() {
+        val lowPrefs = mutablePreferencesOf(
+            intPreferencesKey("video_shared_transition_custom_duration_millis") to 120
+        )
+        val highPrefs = mutablePreferencesOf(
+            intPreferencesKey("video_shared_transition_custom_duration_millis") to 1200
+        )
+
+        assertEquals(
+            VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS,
+            mapHomeSettingsFromPreferences(lowPrefs).videoSharedTransitionCustomDurationMillis
+        )
+        assertEquals(
+            VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS,
+            mapHomeSettingsFromPreferences(highPrefs).videoSharedTransitionCustomDurationMillis
+        )
     }
 
     @Test

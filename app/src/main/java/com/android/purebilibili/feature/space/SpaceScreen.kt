@@ -106,6 +106,7 @@ import com.android.purebilibili.core.ui.blur.unifiedBlur
 import com.android.purebilibili.core.ui.resolveOfficialVerifyBadge
 import com.android.purebilibili.core.ui.components.IOSSearchBar
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
@@ -2503,10 +2504,16 @@ private fun Modifier.spaceVideoCoverSharedBounds(
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ): Modifier {
     val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
-    val cardSharedTransitionMotionSpec = remember(sourceRoute, sharedTransitionKey) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val cardSharedTransitionMotionSpec = remember(
+        sourceRoute,
+        sharedTransitionKey,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sourceRoute,
-            transitionEnabled = sharedTransitionKey != null
+            transitionEnabled = sharedTransitionKey != null,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val sharedTransitionReady = sharedTransitionKey != null &&
@@ -2992,10 +2999,16 @@ private fun SpaceArchiveListItemRow(
     }
     val densityValue = density.density
     val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
-    val cardSharedTransitionMotionSpec = remember(sourceRoute, sharedTransitionKey) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val cardSharedTransitionMotionSpec = remember(
+        sourceRoute,
+        sharedTransitionKey,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sourceRoute,
-            transitionEnabled = sharedTransitionKey != null
+            transitionEnabled = sharedTransitionKey != null,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     var coverBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }

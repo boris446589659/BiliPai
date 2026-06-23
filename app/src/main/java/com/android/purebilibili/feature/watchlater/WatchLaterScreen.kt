@@ -58,6 +58,7 @@ import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.network.NetworkModule
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
@@ -926,6 +927,7 @@ private fun WatchLaterVideoCard(
     }
     val cardBoundsRef = remember { object { var value: androidx.compose.ui.geometry.Rect? = null } }
     val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val sharedElementReady = transitionEnabled &&
@@ -933,10 +935,11 @@ private fun WatchLaterVideoCard(
         sourceRoute != null &&
         sharedTransitionScope != null &&
         animatedVisibilityScope != null
-    val sharedTransitionMotionSpec = remember(sourceRoute, transitionEnabled) {
+    val sharedTransitionMotionSpec = remember(sourceRoute, transitionEnabled, sharedTransitionSpeedSettings) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sourceRoute,
-            transitionEnabled = transitionEnabled
+            transitionEnabled = transitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val cardClick = {

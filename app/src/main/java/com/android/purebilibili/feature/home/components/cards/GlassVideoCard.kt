@@ -52,6 +52,7 @@ import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionEnabled
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
@@ -159,10 +160,16 @@ fun GlassVideoCard(
         sharedElementSourceRoute ?: localSharedElementSourceRoute
     }
     val effectiveTransitionEnabled = transitionEnabled && LocalSharedTransitionEnabled.current
-    val cardSharedTransitionMotionSpec = remember(effectiveSharedElementSourceRoute, effectiveTransitionEnabled) {
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val cardSharedTransitionMotionSpec = remember(
+        effectiveSharedElementSourceRoute,
+        effectiveTransitionEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = effectiveSharedElementSourceRoute,
-            transitionEnabled = effectiveTransitionEnabled
+            transitionEnabled = effectiveTransitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val triggerCardClick = {

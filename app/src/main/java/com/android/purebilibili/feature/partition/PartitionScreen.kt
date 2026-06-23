@@ -73,6 +73,7 @@ import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.resolveEffectiveLiquidGlassEnabled
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
@@ -869,6 +870,7 @@ private fun PartitionVideoRow(
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val sharedTransitionEnabled = LocalSharedTransitionEnabled.current
     val sharedElementSourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
     val coverSharedEnabled = shouldEnableVideoCoverSharedTransition(
         transitionEnabled = sharedTransitionEnabled,
         hasSharedTransitionScope = sharedTransitionScope != null,
@@ -878,10 +880,15 @@ private fun PartitionVideoRow(
         coverSharedEnabled = coverSharedEnabled,
         isQuickReturnLimited = false
     )
-    val sharedTransitionMotionSpec = remember(sharedElementSourceRoute, sharedTransitionEnabled) {
+    val sharedTransitionMotionSpec = remember(
+        sharedElementSourceRoute,
+        sharedTransitionEnabled,
+        sharedTransitionSpeedSettings
+    ) {
         resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = sharedElementSourceRoute,
-            transitionEnabled = sharedTransitionEnabled
+            transitionEnabled = sharedTransitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
         )
     }
     val sharedTransitionVisualSpec = remember(sharedElementSourceRoute) {

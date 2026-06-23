@@ -123,8 +123,10 @@ import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.ui.performance.TrackJankStateFlag
 import com.android.purebilibili.core.ui.performance.TrackJankStateValue
 import com.android.purebilibili.core.ui.blur.unifiedBlur
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
+import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionSourceCornerDp
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.util.CardPositionManager
@@ -2649,6 +2651,18 @@ fun VideoPlayerSection(
         hasAnimatedVisibilityScope = animatedVisibilityScope != null,
         sourceRoute = sourceRouteForSharedElement
     )
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val coverOverlaySharedTransitionMotionSpec = remember(
+        sourceRouteForSharedElement,
+        transitionEnabled,
+        sharedTransitionSpeedSettings
+    ) {
+        resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = sourceRouteForSharedElement,
+            transitionEnabled = transitionEnabled,
+            speedSettings = sharedTransitionSpeedSettings
+        )
+    }
     val forcedReturnCoverSharedElementSourceRoute = resolveForcedReturnCoverSharedElementSourceRoute(
         sourceRouteForSharedElement
     )
@@ -2680,8 +2694,8 @@ fun VideoPlayerSection(
                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                     boundsTransform = { _, _ ->
                         tween(
-                            durationMillis = com.android.purebilibili.core.ui.transition.HOME_SHARED_TRANSITION_DURATION_MILLIS,
-                            easing = com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEasing()
+                            durationMillis = coverOverlaySharedTransitionMotionSpec.durationMillis,
+                            easing = coverOverlaySharedTransitionMotionSpec.easing
                         )
                     },
                     clipInOverlayDuringTransition = OverlayClip(coverCardShape)
