@@ -1289,7 +1289,12 @@ private fun MobileSettingsLayout(
         )
     }
     val sectionOrder = remember { resolveSettingsRootCategoryOrder() }
-    var expandedCategories by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var activeRootCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
+    val activeRootCategory = remember(activeRootCategoryName) {
+        activeRootCategoryName?.let { name ->
+            SettingsRootCategory.entries.firstOrNull { it.name == name }
+        }
+    }
     val focusRequest by SettingsSearchFocusController.request.collectAsStateWithLifecycle()
     val bottomBarVisible = LocalBottomBarVisible.current
     val bottomInset = resolveSettingsContentBottomPadding(
@@ -1380,8 +1385,11 @@ private fun MobileSettingsLayout(
             return@LaunchedEffect
         }
         val category = resolveSettingsRootCategoryForSearchTarget(request.target) ?: return@LaunchedEffect
-        expandedCategories = expandedCategories + category.name
+        activeRootCategoryName = category.name
         SettingsSearchFocusController.clear(request.token)
+    }
+    BackHandler(enabled = activeRootCategory != null && searchQuery.isBlank()) {
+        activeRootCategoryName = null
     }
 
     AdaptiveScaffold(
@@ -1393,10 +1401,16 @@ private fun MobileSettingsLayout(
                     surfaceAlpha = 0.86f
                 )
                 AdaptiveTopAppBar(
-                    title = screenTitle,
+                    title = activeRootCategory?.title ?: screenTitle,
                     navigationIcon = {
                         IconButton(
-                            onClick = onBack
+                            onClick = {
+                                if (activeRootCategory != null && searchQuery.isBlank()) {
+                                    activeRootCategoryName = null
+                                } else {
+                                    onBack()
+                                }
+                            }
                         ) {
                             Icon(
                                 rememberAppBackIcon(),
@@ -1432,13 +1446,18 @@ private fun MobileSettingsLayout(
             }
 
             item {
-                if (searchQuery.isBlank()) {
+                if (searchQuery.isBlank() && activeRootCategory == null) {
                     Box(
                         modifier = Modifier
                             .padding(top = 8.dp)
                             .entrance()
                     ) {
-                        SupportAuthorCompactSection(onDonateClick = onDonateClick)
+                        SettingsRootCategoryListSection(
+                            categories = sectionOrder,
+                            onCategoryClick = { category ->
+                                activeRootCategoryName = category.name
+                            }
+                        )
                     }
                 }
             }
@@ -1450,7 +1469,7 @@ private fun MobileSettingsLayout(
                         onResultClick = { result ->
                             val category = resolveSettingsRootCategoryForSearchTarget(result.target)
                             if (isSceneSettingsSearchTarget(result.target) && category != null) {
-                                expandedCategories = expandedCategories + category.name
+                                activeRootCategoryName = category.name
                                 onSearchQueryChange("")
                             } else {
                                 onSearchResultClick(result)
@@ -1460,31 +1479,53 @@ private fun MobileSettingsLayout(
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             } else {
-                sectionOrder.forEachIndexed { index, section ->
+                val category = activeRootCategory
+                if (category != null) {
                     item {
                         Box(
                             modifier = Modifier
-                                .padding(top = if (index == 0) 8.dp else 16.dp)
+                                .padding(top = 12.dp)
                                 .entrance()
                         ) {
-                            SettingsRootCategoryNavigationSection(
-                                category = section,
-                                isExpanded = section.name in expandedCategories,
-                                onToggle = {
-                                    expandedCategories = if (section.name in expandedCategories) {
-                                        expandedCategories - section.name
-                                    } else {
-                                        expandedCategories + section.name
-                                    }
-                                },
+                            SettingsRootCategoryContent(
+                                category = category,
                                 actions = rootCategoryActions,
                                 state = rootCategoryState
                             )
                         }
                     }
-                }
+                } else {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 16.dp)
+                                .entrance()
+                        ) {
+                            SettingsAboutHomeSection(
+                                onGithubClick = onGithubClick,
+                                onTelegramClick = onTelegramClick,
+                                onCheckUpdateClick = onCheckUpdateClick,
+                                onDonateClick = onDonateClick
+                            )
+                        }
+                    }
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 16.dp)
+                                .entrance()
+                        ) {
+                            SettingsBackupHomeSection(
+                                onSettingsShareClick = onSettingsShareClick,
+                                onWebDavBackupClick = onWebDavBackupClick,
+                                onClearCacheClick = onClearCacheClick,
+                                cacheSize = cacheSize
+                            )
+                        }
+                    }
 
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
             }
         }
         }

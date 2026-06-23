@@ -62,19 +62,19 @@ class SettingsRootCategoryContentStructureTest {
     }
 
     @Test
-    fun mobileSettingsRoot_doesNotRenderDuplicateCategoryHeaders() {
+    fun mobileSettingsRoot_usesNagramStyleHomeSections() {
         val source = listOf(
             File("app/src/main/java/com/android/purebilibili/feature/settings/screen/SettingsScreen.kt"),
             File("src/main/java/com/android/purebilibili/feature/settings/screen/SettingsScreen.kt")
         ).first { it.exists() }.readText()
 
-        val rootLoopBlock = source
-            .substringAfter("sectionOrder.forEachIndexed { index, section ->")
-            .substringBefore("item { Spacer(modifier = Modifier.height(16.dp)) }")
-
-        assertFalse(rootLoopBlock.contains("SettingsCategoryHeader("))
-        assertTrue(rootLoopBlock.contains("SettingsRootCategoryNavigationSection("))
-        assertFalse(rootLoopBlock.contains("SettingsRootCategoryContent("))
+        assertTrue(source.contains("SettingsSearchBarSection("))
+        assertTrue(source.contains("SettingsRootCategoryListSection("))
+        assertTrue(source.contains("SettingsAboutHomeSection("))
+        assertTrue(source.contains("SettingsBackupHomeSection("))
+        assertTrue(source.indexOf("SettingsRootCategoryListSection(") < source.indexOf("SettingsAboutHomeSection("))
+        assertTrue(source.indexOf("SettingsAboutHomeSection(") < source.indexOf("SettingsBackupHomeSection("))
+        assertFalse(source.contains("SupportAuthorCompactSection("))
     }
 
     @Test
@@ -98,39 +98,34 @@ class SettingsRootCategoryContentStructureTest {
     }
 
     @Test
-    fun mobileSettingsRootPinsSearchAboveSupportAndCategories() {
+    fun mobileSettingsRootPinsSearchAboveNagramSections() {
         val source = listOf(
             File("app/src/main/java/com/android/purebilibili/feature/settings/screen/SettingsScreen.kt"),
             File("src/main/java/com/android/purebilibili/feature/settings/screen/SettingsScreen.kt")
         ).first { it.exists() }.readText()
 
-        val rootListBlock = source
-            .substringAfter("LazyColumn(")
-            .substringBefore("sectionOrder.forEachIndexed")
-
-        assertTrue(rootListBlock.contains("SettingsSearchBarSection("))
-        assertTrue(rootListBlock.contains("SupportAuthorCompactSection("))
-        assertFalse(rootListBlock.contains("activeRootCategory == null"), "should NOT use activeRootCategory")
-        assertTrue(rootListBlock.indexOf("SettingsSearchBarSection(") < rootListBlock.indexOf("SupportAuthorCompactSection("))
-        assertFalse(rootListBlock.contains("FollowAuthorSection("))
+        assertTrue(source.contains("SettingsSearchBarSection("))
+        assertTrue(source.contains("activeRootCategoryName"))
+        assertTrue(source.indexOf("SettingsSearchBarSection(") < source.indexOf("SettingsRootCategoryListSection("))
+        assertFalse(source.contains("FollowAuthorSection("))
     }
 
     @Test
-    fun mobileSettingsRootUsesNavigationCategorySections() {
+    fun mobileSettingsRootUsesCategoryRowsWithoutAccordionExpansion() {
         val source = listOf(
             File("app/src/main/java/com/android/purebilibili/feature/settings/ui/SettingsSections.kt"),
             File("src/main/java/com/android/purebilibili/feature/settings/ui/SettingsSections.kt")
         ).first { it.exists() }.readText()
 
         val sectionBlock = source
-            .substringAfter("internal fun SettingsRootCategoryNavigationSection(")
+            .substringAfter("internal fun SettingsRootCategoryListSection(")
             .substringBefore("@Composable\ninternal fun SettingsDetailGroup(")
 
-        assertTrue(sectionBlock.contains("text = category.title"))
-        assertTrue(sectionBlock.contains("text = category.subtitle"))
-        assertTrue(sectionBlock.contains("CupertinoIcons.Default.ChevronForward"))
-        assertTrue(sectionBlock.contains("AnimatedVisibility("), "should use AnimatedVisibility for accordion")
-        assertTrue(sectionBlock.contains("SettingsRootCategoryContent("), "should inline SettingsRootCategoryContent")
+        assertTrue(sectionBlock.contains("title = category.title"))
+        assertTrue(sectionBlock.contains("subtitle = category.subtitle"))
+        assertTrue(sectionBlock.contains("onCategoryClick(category)"))
+        assertFalse(sectionBlock.contains("AnimatedVisibility("), "Nagram-style root should navigate, not accordion-expand")
+        assertFalse(sectionBlock.contains("SettingsRootCategoryContent("), "root rows should not inline detail content")
     }
 
     @Test
@@ -140,9 +135,10 @@ class SettingsRootCategoryContentStructureTest {
             File("src/main/java/com/android/purebilibili/feature/settings/screen/SettingsScreen.kt")
         ).first { it.exists() }.readText()
 
-        assertFalse(source.contains("SettingsRootCategoryDetailLayout("), "should NOT use DetailLayout")
-        assertTrue(source.contains("isExpanded ="), "should use accordion isExpanded")
-        assertTrue(source.contains("onToggle ="), "should use accordion onToggle")
+        assertTrue(source.contains("activeRootCategoryName"))
+        assertTrue(source.contains("SettingsRootCategoryContent("))
+        assertFalse(source.contains("isExpanded ="), "should not use accordion isExpanded")
+        assertFalse(source.contains("onToggle ="), "should not use accordion onToggle")
         assertFalse(source.contains("expandedRootCategoryNames"))
     }
 

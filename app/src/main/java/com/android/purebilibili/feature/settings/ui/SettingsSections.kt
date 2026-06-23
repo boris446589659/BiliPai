@@ -354,6 +354,132 @@ internal fun SettingsRootCategoryNavigationSection(
 }
 
 @Composable
+internal fun SettingsRootCategoryListSection(
+    categories: List<SettingsRootCategory>,
+    onCategoryClick: (SettingsRootCategory) -> Unit
+) {
+    val uiPreset = LocalUiPreset.current
+
+    SettingsDetailGroup(title = "分类") {
+        SettingsCardGroup {
+            categories.forEachIndexed { index, category ->
+                val visual = rememberSettingsEntryVisual(category.searchTarget, uiPreset)
+                SettingClickableItem(
+                    icon = visual.icon,
+                    iconPainter = visual.iconResId?.let { painterResource(id = it) },
+                    title = category.title,
+                    subtitle = category.subtitle,
+                    onClick = { onCategoryClick(category) },
+                    iconTint = visual.iconTint
+                )
+                if (index != categories.lastIndex) {
+                    SettingsDivider(startIndent = 66.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsAboutHomeSection(
+    onGithubClick: () -> Unit,
+    onTelegramClick: () -> Unit,
+    onCheckUpdateClick: () -> Unit,
+    onDonateClick: () -> Unit
+) {
+    val uiPreset = LocalUiPreset.current
+    val githubVisual = rememberSettingsEntryVisual(SettingsSearchTarget.OPEN_SOURCE_HOME, uiPreset)
+    val telegramVisual = rememberSettingsEntryVisual(SettingsSearchTarget.TELEGRAM, uiPreset)
+    val updateVisual = rememberSettingsEntryVisual(SettingsSearchTarget.CHECK_UPDATE, uiPreset)
+    val donateVisual = rememberSettingsEntryVisual(SettingsSearchTarget.DONATE, uiPreset)
+
+    SettingsDetailGroup(title = "关于") {
+        SettingsCardGroup {
+            SettingClickableItem(
+                icon = telegramVisual.icon,
+                iconPainter = telegramVisual.iconResId?.let { painterResource(id = it) },
+                title = "Telegram 频道",
+                value = "官方发布与反馈",
+                onClick = onTelegramClick,
+                iconTint = telegramVisual.iconTint
+            )
+            SettingsDivider(startIndent = 66.dp)
+            SettingClickableItem(
+                icon = githubVisual.icon,
+                iconPainter = githubVisual.iconResId?.let { painterResource(id = it) },
+                title = "开源主页",
+                value = "GitHub",
+                onClick = onGithubClick,
+                iconTint = githubVisual.iconTint
+            )
+            SettingsDivider(startIndent = 66.dp)
+            SettingClickableItem(
+                icon = updateVisual.icon,
+                iconPainter = updateVisual.iconResId?.let { painterResource(id = it) },
+                title = "检查更新",
+                value = "查看最新版本",
+                onClick = onCheckUpdateClick,
+                iconTint = updateVisual.iconTint
+            )
+            SettingsDivider(startIndent = 66.dp)
+            SettingClickableItem(
+                icon = donateVisual.icon,
+                iconPainter = donateVisual.iconResId?.let { painterResource(id = it) },
+                title = "打赏作者",
+                value = "支持开发",
+                onClick = onDonateClick,
+                iconTint = donateVisual.iconTint,
+                enableCopy = false
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SettingsBackupHomeSection(
+    onSettingsShareClick: () -> Unit,
+    onWebDavBackupClick: () -> Unit,
+    onClearCacheClick: () -> Unit,
+    cacheSize: String
+) {
+    val uiPreset = LocalUiPreset.current
+    val shareVisual = rememberSettingsEntryVisual(SettingsSearchTarget.SETTINGS_SHARE, uiPreset)
+    val webDavVisual = rememberSettingsEntryVisual(SettingsSearchTarget.WEBDAV_BACKUP, uiPreset)
+    val cacheVisual = rememberSettingsEntryVisual(SettingsSearchTarget.CLEAR_CACHE, uiPreset)
+
+    SettingsDetailGroup(title = "设置") {
+        SettingsCardGroup {
+            SettingClickableItem(
+                icon = shareVisual.icon,
+                iconPainter = shareVisual.iconResId?.let { painterResource(id = it) },
+                title = "设置分享",
+                value = "导入、导出与迁移",
+                onClick = onSettingsShareClick,
+                iconTint = shareVisual.iconTint
+            )
+            SettingsDivider(startIndent = 66.dp)
+            SettingClickableItem(
+                icon = webDavVisual.icon,
+                iconPainter = webDavVisual.iconResId?.let { painterResource(id = it) },
+                title = "WebDAV 备份",
+                value = "云端同步",
+                onClick = onWebDavBackupClick,
+                iconTint = webDavVisual.iconTint
+            )
+            SettingsDivider(startIndent = 66.dp)
+            SettingClickableItem(
+                icon = cacheVisual.icon,
+                iconPainter = cacheVisual.iconResId?.let { painterResource(id = it) },
+                title = "清理缓存",
+                value = cacheSize,
+                onClick = onClearCacheClick,
+                iconTint = cacheVisual.iconTint
+            )
+        }
+    }
+}
+
+@Composable
 internal fun SettingsDetailGroup(
     title: String,
     content: @Composable ColumnScope.() -> Unit

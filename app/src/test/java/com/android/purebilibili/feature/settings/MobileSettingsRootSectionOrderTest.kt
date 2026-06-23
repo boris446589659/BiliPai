@@ -17,12 +17,10 @@ class MobileSettingsRootSectionOrderTest {
     fun rootSections_shouldUseSceneTitles() {
         assertEquals(
             listOf(
-                "界面与首页",
-                "动态与推荐",
-                "播放与互动",
-                "导航与手势",
-                "数据与隐私",
-                "扩展与关于"
+                "外观与交互",
+                "内容与播放",
+                "隐私与存储",
+                "系统与关于"
             ),
             resolveSettingsRootCategoryOrder().map { it.title }
         )
