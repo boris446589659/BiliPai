@@ -1664,12 +1664,34 @@ internal val AboutContributors = listOf(
     AboutContributor("Matt Van Horn", "mvanhorn")
 )
 
+private val AboutSlogans = listOf(
+    """
+    删繁留简见初心,
+    精雕细磨显匠心。
+    弹幕浓淡随手调,
+    原生丝滑不染尘。
+    """.trimIndent(),
+    """
+    广告退场方显净,
+    不扰清欢伴此心。
+    隐私自留不上传,
+    一屏干净任你行。
+    """.trimIndent(),
+    """
+    弱水三千凡君取,
+    繁简去留只凭心。
+    插件添之随所愿,
+    本体常净似初晨。
+    """.trimIndent()
+)
+
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun AboutProjectOverviewCard(
     versionName: String,
     contributors: List<AboutContributor> = AboutContributors
 ) {
+    val slogan = remember { AboutSlogans.random() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1713,7 +1735,7 @@ private fun AboutProjectOverviewCard(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "BiliPai 想把看视频这件事做得安静一点：少打扰、少负担，也尽量把选择权留给你。",
+                    text = slogan,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
