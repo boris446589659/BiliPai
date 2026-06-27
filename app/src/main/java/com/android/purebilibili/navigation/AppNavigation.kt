@@ -372,6 +372,9 @@ fun AppNavigation(
         mutableStateOf(!firstLaunchShown && !launchDisclaimerAck)
     }
     val startDestination = if (firstLaunchShown) ScreenRoutes.Home.route else ScreenRoutes.Onboarding.route
+    val launchToPortraitFeedOnStartupAtInit = remember {
+        SettingsManager.isLaunchToPortraitFeedOnStartupSync(context)
+    }
 
     SharedTransitionProvider(enabled = cardTransitionEnabled) {
         CompositionLocalProvider(
@@ -381,11 +384,12 @@ fun AppNavigation(
             )
         ) {
         // [新增] 全局底栏状态管理
-        var navigation3BackStack by remember(startDestination) {
+        var navigation3BackStack by remember(startDestination, launchToPortraitFeedOnStartupAtInit) {
             mutableStateOf(
                 resolveInitialBiliPaiBackStack(
                     firstRoute = startDestination,
-                    onboardingRequired = !firstLaunchShown
+                    onboardingRequired = !firstLaunchShown,
+                    openPortraitFeedOnStartup = firstLaunchShown && launchToPortraitFeedOnStartupAtInit
                 )
             )
         }
@@ -446,7 +450,6 @@ fun AppNavigation(
                 initialValue = com.android.purebilibili.core.store.PlayerInteractionSettings(),
                 context = kotlin.coroutines.EmptyCoroutineContext
             )
-        var hasLaunchedStartupPortraitFeed by rememberSaveable { mutableStateOf(false) }
         val bottomBarVisibilityMode = appNavigationSettings.bottomBarVisibilityMode
         val orderedVisibleTabIds = appNavigationSettings.orderedVisibleTabIds
         val visibleBottomBarItems = remember(orderedVisibleTabIds) {
@@ -496,7 +499,9 @@ fun AppNavigation(
         // 统一侧边栏判定策略：600dp+ 且用户开启侧边栏
         val useSideNavigation = shouldUseSidebarNavigationForLayout(windowSizeClass, tabletUseSidebar)
         // 由所有入口共用的底栏内部显隐状态。进视频前先置为隐藏，避免返回到主入口后再补一次隐藏动画。
-        var isBottomBarVisible by remember { mutableStateOf(true) }
+        var isBottomBarVisible by remember(launchToPortraitFeedOnStartupAtInit) {
+            mutableStateOf(!launchToPortraitFeedOnStartupAtInit)
+        }
 
         // [修复] 平板模式下(宽度>=600dp)，进入设置页(Settings.route)时隐藏底栏
         // 因为平板设置页使用 SplitLayout，已经有自己的内部导航结构，不需要底栏
@@ -623,10 +628,35 @@ fun AppNavigation(
             bottomBarSearchLaunchKey += 1
             navigateToSearchFromBottomBar()
         }
+        fun navigateToPortraitStoryInNavigation3(
+            seed: PortraitStoryNavigationSeed
+        ) {
+            if (!canNavigate(false)) return
+            isBottomBarVisible = false
+            pushNavigation3Key(
+                BiliPaiNavKey.Story(
+                    seedBvid = seed.bvid,
+                    seedCid = seed.cid,
+                    seedCover = seed.coverUrl
+                )
+            )
+        }
         fun navigateToVideoRouteInNavigation3(route: String, sourceRoute: String?) {
             if (!canNavigate(false)) return
             val parsedKey = legacyRouteToBiliPaiNavKey(route)
-            val videoBvid = (parsedKey as? BiliPaiNavKey.VideoDetail)?.bvid.orEmpty()
+            val videoKey = parsedKey as? BiliPaiNavKey.VideoDetail
+            resolvePortraitStoryNavigationSeed(
+                directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry,
+                isVerticalVideo = videoKey?.initialVertical == true,
+                startAudio = videoKey?.startAudio == true,
+                bvid = videoKey?.bvid.orEmpty(),
+                cid = videoKey?.cid ?: 0L,
+                coverUrl = videoKey?.coverUrl.orEmpty()
+            )?.let { seed ->
+                navigateToPortraitStoryInNavigation3(seed)
+                return
+            }
+            val videoBvid = videoKey?.bvid.orEmpty()
             val matchedVisibleCardRoute = resolveVideoCardSourceRouteForNavigation(
                 currentRoute = navigation3BackStack.lastOrNull()?.toLegacyRoute(),
                 videoBvid = videoBvid,
@@ -669,6 +699,17 @@ fun AppNavigation(
             initialVertical: Boolean = false,
             sourceRoute: String? = null
         ) {
+            resolvePortraitStoryNavigationSeed(
+                directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry,
+                isVerticalVideo = initialVertical,
+                startAudio = startAudio,
+                bvid = bvid,
+                cid = cid,
+                coverUrl = coverUrl
+            )?.let { seed ->
+                navigateToPortraitStoryInNavigation3(seed)
+                return
+            }
             val isNetworkAvailable = NetworkUtils.isNetworkAvailable(context)
             val offlineTask = com.android.purebilibili.feature.download.resolveOfflineVideoNavigationTask(
                 tasks = downloadTasks.values,
@@ -698,23 +739,7 @@ fun AppNavigation(
             )
         }
         fun navigateToHomeVideoInNavigation3(request: HomeVideoClickRequest) {
-            when (
-                val target = resolveHomeNavigationTarget(
-                    request = request,
-                    directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry
-                )
-            ) {
-                is HomeNavigationTarget.PortraitStory -> {
-                    if (!canNavigate(false)) return
-                    isBottomBarVisible = false
-                    pushNavigation3Key(
-                        BiliPaiNavKey.Story(
-                            seedBvid = target.bvid,
-                            seedCid = target.cid,
-                            seedCover = target.coverUrl
-                        )
-                    )
-                }
+            when (val target = resolveHomeNavigationTarget(request)) {
                 is HomeNavigationTarget.Video -> {
                     val intent = resolveHomeVideoNavigationIntent(request)
                     if (intent != null) {
@@ -738,18 +763,6 @@ fun AppNavigation(
                 }
                 null -> Unit
             }
-        }
-        LaunchedEffect(
-            currentNavigation3Key,
-            firstLaunchShown,
-            playerInteractionSettings.launchToPortraitFeedOnStartup,
-            hasLaunchedStartupPortraitFeed
-        ) {
-            if (!firstLaunchShown || hasLaunchedStartupPortraitFeed) return@LaunchedEffect
-            if (!playerInteractionSettings.launchToPortraitFeedOnStartup) return@LaunchedEffect
-            if (currentNavigation3Key != BiliPaiNavKey.MainHost) return@LaunchedEffect
-            hasLaunchedStartupPortraitFeed = true
-            pushNavigation3Key(BiliPaiNavKey.Story())
         }
         val navigation3SourceMetadata = currentNavigation3SourceMetadata()
         val previousNavigation3Key = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
@@ -1305,7 +1318,7 @@ fun AppNavigation(
                                     globalHazeState = mainHazeState,
                                     scrollToTopChannel = historyScrollChannel,
                                     onUpClick = { mid -> pushNavigation3Route(ScreenRoutes.Space.createRoute(mid)) },
-                                    onVideoClick = { lookupKey, cid, cover ->
+                                    onVideoClick = { lookupKey, cid, cover, isVertical ->
                                         val historyItem = historyViewModel.getHistoryItem(lookupKey)
                                         val resolvedCid = resolveHistoryPlaybackCid(
                                             clickedCid = cid,
@@ -1323,7 +1336,8 @@ fun AppNavigation(
                                                         lookupKey,
                                                         resolvedCid,
                                                         cover,
-                                                        resumePositionMs = resumePositionMs
+                                                        resumePositionMs = resumePositionMs,
+                                                        initialVertical = isVertical
                                                     )
                                                 }
                                             }
@@ -1341,7 +1355,8 @@ fun AppNavigation(
                                                         lookupKey,
                                                         resolvedCid,
                                                         cover,
-                                                        resumePositionMs = resumePositionMs
+                                                        resumePositionMs = resumePositionMs,
+                                                        initialVertical = isVertical
                                                     )
                                                 }
                                             }
@@ -1371,7 +1386,8 @@ fun AppNavigation(
                                                         lookupKey,
                                                         resolvedCid,
                                                         cover,
-                                                        resumePositionMs = resumePositionMs
+                                                        resumePositionMs = resumePositionMs,
+                                                        initialVertical = isVertical
                                                     )
                                                 }
                                             }
@@ -1380,7 +1396,8 @@ fun AppNavigation(
                                                     lookupKey,
                                                     resolvedCid,
                                                     cover,
-                                                    resumePositionMs = resumePositionMs
+                                                    resumePositionMs = resumePositionMs,
+                                                    initialVertical = isVertical
                                                 )
                                             }
                                         }
@@ -1676,7 +1693,12 @@ fun AppNavigation(
                                 },
                                 onFinish = {
                                     welcomePrefs.edit().putBoolean("first_launch_shown", true).apply()
-                                    navigation3BackStack = listOf(BiliPaiNavKey.MainHost)
+                                    navigation3BackStack = resolveInitialBiliPaiBackStack(
+                                        firstRoute = ScreenRoutes.Home.route,
+                                        onboardingRequired = false,
+                                        openPortraitFeedOnStartup = SettingsManager
+                                            .isLaunchToPortraitFeedOnStartupSync(context)
+                                    )
                                 }
                             )
                         BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(
@@ -1928,11 +1950,12 @@ fun AppNavigation(
                                     onBack = { performSystemBackAction() },
                                     globalHazeState = mainHazeState,
                                     scrollToTopChannel = favoriteScrollChannel,
-                                    onVideoClick = { bvid, cid, cover ->
+                                    onVideoClick = { bvid, cid, cover, isVertical ->
                                         navigateToVideoInNavigation3(
                                             bvid = bvid,
                                             cid = cid,
                                             coverUrl = cover,
+                                            initialVertical = isVertical,
                                             sourceRoute = ScreenRoutes.Favorite.route
                                         )
                                     },
@@ -1970,8 +1993,13 @@ fun AppNavigation(
                                     viewModel = likedVideosViewModel,
                                     onBack = { performSystemBackAction() },
                                     globalHazeState = mainHazeState,
-                                    onVideoClick = { bvid, cid, cover ->
-                                        navigateToVideoInNavigation3(bvid, cid, cover)
+                                    onVideoClick = { bvid, cid, cover, isVertical ->
+                                        navigateToVideoInNavigation3(
+                                            bvid = bvid,
+                                            cid = cid,
+                                            coverUrl = cover,
+                                            initialVertical = isVertical
+                                        )
                                     }
                                 )
                             }
@@ -2035,8 +2063,13 @@ fun AppNavigation(
                                     tid = categoryKey.tid,
                                     name = categoryKey.name,
                                     onBack = { performSystemBackAction() },
-                                    onVideoClick = { bvid, cid, cover ->
-                                        navigateToVideoInNavigation3(bvid, cid, cover)
+                                    onVideoClick = { bvid, cid, cover, isVertical ->
+                                        navigateToVideoInNavigation3(
+                                            bvid = bvid,
+                                            cid = cid,
+                                            coverUrl = cover,
+                                            initialVertical = isVertical
+                                        )
                                     },
                                     isReturningFromVideoDetail = navigation3ReturnSession.isReturningFromDetail,
                                     isQuickReturningFromVideoDetail =
@@ -2075,11 +2108,12 @@ fun AppNavigation(
                                             ownerName = seasonSeriesKey.ownerName,
                                             sharedElementTransition = seasonSeriesKey.sharedElementTransition
                                         ),
-                                        onVideoClick = { bvid, cid, cover ->
+                                        onVideoClick = { bvid, cid, cover, isVertical ->
                                             navigateToVideoInNavigation3(
                                                 bvid = bvid,
                                                 cid = cid,
                                                 coverUrl = cover,
+                                                initialVertical = isVertical,
                                                 sourceRoute = seasonSeriesKey.toLegacyRoute()
                                             )
                                         },

@@ -1481,7 +1481,7 @@ private fun PlaybackFullscreenGestureSettingsSection(
             icon = rememberSettingsSemanticIcon(SettingsIconRole.PORTRAIT_SWIPE_FULLSCREEN),
             title = "竖屏视频直达刷视频模式",
             subtitle = if (directPortraitStoryEntry) {
-                "首页点击竖屏视频将直接进入竖屏刷视频，跳过详情页"
+                "任意入口点击竖屏视频将直接进入竖屏刷视频，跳过详情页"
             } else {
                 "关闭后竖屏视频仍从详情页进入"
             },

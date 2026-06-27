@@ -6,7 +6,8 @@ internal data class CommonListVideoNavigationRequest(
     val lookupKey: String,
     val bvid: String,
     val cid: Long,
-    val coverUrl: String
+    val coverUrl: String,
+    val isVertical: Boolean = false
 )
 
 internal fun resolveCommonListVideoNavigationRequest(
@@ -23,6 +24,7 @@ internal fun resolveCommonListVideoNavigationRequest(
         lookupKey = normalizedLookupKey,
         bvid = normalizedBvid,
         cid = video.cid.takeIf { it > 0L } ?: 0L,
-        coverUrl = video.pic
+        coverUrl = video.pic,
+        isVertical = video.isVertical
     )
 }

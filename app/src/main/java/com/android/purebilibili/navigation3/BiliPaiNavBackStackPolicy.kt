@@ -2,10 +2,14 @@ package com.android.purebilibili.navigation3
 
 internal fun resolveInitialBiliPaiBackStack(
     firstRoute: String?,
-    onboardingRequired: Boolean
+    onboardingRequired: Boolean,
+    openPortraitFeedOnStartup: Boolean = false
 ): List<BiliPaiNavKey> {
     if (onboardingRequired) {
         return listOf(BiliPaiNavKey.Onboarding)
+    }
+    if (openPortraitFeedOnStartup) {
+        return listOf(BiliPaiNavKey.MainHost, BiliPaiNavKey.Story())
     }
     return listOf(BiliPaiNavKey.MainHost)
 }

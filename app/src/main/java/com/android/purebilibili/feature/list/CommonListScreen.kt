@@ -175,7 +175,7 @@ internal fun resolveFavoritePlayAllItems(
 fun CommonListScreen(
     viewModel: BaseListViewModel,
     onBack: () -> Unit,
-    onVideoClick: (String, Long, String) -> Unit,
+    onVideoClick: (String, Long, String, Boolean) -> Unit,
     onUpClick: ((Long) -> Unit)? = null,
     onCollectionClick: ((FavoriteCollectionRoute) -> Unit)? = null,
     onFavoriteFolderClick: ((Long, Long, String, String) -> Unit)? = null,
@@ -729,7 +729,8 @@ fun CommonListScreen(
                 )
                 PlaylistManager.setPlayMode(PlayMode.SEQUENTIAL)
             }
-            onVideoClick(bvid, cid, coverUrl)
+            val isVertical = items.firstOrNull { it.bvid == bvid }?.isVertical ?: false
+            onVideoClick(bvid, cid, coverUrl, isVertical)
         }
 
     AdaptiveScaffold(
@@ -838,7 +839,7 @@ fun CommonListScreen(
                                 cardMotionTier = cardMotionTier,
                                 showOnlineCount = showOnlineCount,
                                 videoCardAppearance = videoCardAppearance,
-                                onVideoClick = { bvid, cid, coverUrl ->
+                                onVideoClick = { bvid, cid, coverUrl, isVertical ->
                                     playFavoriteVideo(folderUiState.items, bvid, cid, coverUrl)
                                 },
                                 onCollectionClick = onCollectionClick,
@@ -876,7 +877,7 @@ fun CommonListScreen(
                             cardMotionTier = cardMotionTier,
                             showOnlineCount = showOnlineCount,
                             videoCardAppearance = videoCardAppearance,
-                            onVideoClick = { bvid, cid, coverUrl ->
+                            onVideoClick = { bvid, cid, coverUrl, _ ->
                                 playFavoriteVideo(folderUiState.items, bvid, cid, coverUrl)
                             },
                             onCollectionClick = onCollectionClick,
@@ -905,11 +906,11 @@ fun CommonListScreen(
                         cardMotionTier = cardMotionTier,
                         showOnlineCount = showOnlineCount,
                         videoCardAppearance = videoCardAppearance,
-                        onVideoClick = { bvid, cid, coverUrl ->
+                        onVideoClick = { bvid, cid, coverUrl, isVertical ->
                             if (shouldUseFavoritePlaybackQueue) {
                                 playFavoriteVideo(state.items, bvid, cid, coverUrl)
                             } else {
-                                onVideoClick(bvid, cid, coverUrl)
+                                onVideoClick(bvid, cid, coverUrl, isVertical)
                             }
                         },
                         onCollectionClick = onCollectionClick,
@@ -1030,7 +1031,12 @@ fun CommonListScreen(
                                             .getOrNull(externalPlaylist.startIndex)
                                             ?: return@IconButton
                                         onPlayAllAudioClick?.invoke(startItem.bvid, startItem.cid)
-                                            ?: onVideoClick(startItem.bvid, startItem.cid, startItem.pic)
+                                            ?: onVideoClick(
+                                                startItem.bvid,
+                                                startItem.cid,
+                                                startItem.pic,
+                                                startItem.isVertical
+                                            )
                                     }
                                 ) {
                                     Icon(
@@ -1540,7 +1546,7 @@ private fun CommonListContent(
     cardMotionTier: MotionTier,
     showOnlineCount: Boolean,
     videoCardAppearance: CommonListVideoCardAppearance,
-    onVideoClick: (String, Long, String) -> Unit,
+    onVideoClick: (String, Long, String, Boolean) -> Unit,
     onCollectionClick: ((FavoriteCollectionRoute) -> Unit)? = null,
     onRetry: (() -> Unit)? = null,
     onLoadMore: () -> Unit,
@@ -1721,7 +1727,12 @@ private fun CommonListContent(
                                                 video = video,
                                                 fallbackLookupKey = resolveHistoryLookupKey?.invoke(video)
                                             )?.let { request ->
-                                                onVideoClick(request.lookupKey, request.cid, request.coverUrl)
+                                                onVideoClick(
+                                                    request.lookupKey,
+                                                    request.cid,
+                                                    request.coverUrl,
+                                                    request.isVertical
+                                                )
                                             }
                                         }
                                     },
@@ -1754,7 +1765,12 @@ private fun CommonListContent(
                                                 video = video,
                                                 fallbackLookupKey = resolveHistoryLookupKey?.invoke(video)
                                             )?.let { request ->
-                                                onVideoClick(request.lookupKey, request.cid, request.coverUrl)
+                                                onVideoClick(
+                                                    request.lookupKey,
+                                                    request.cid,
+                                                    request.coverUrl,
+                                                    request.isVertical
+                                                )
                                             }
                                         }
                                     },

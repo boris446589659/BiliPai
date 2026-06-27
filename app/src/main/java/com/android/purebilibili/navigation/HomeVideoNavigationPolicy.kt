@@ -15,11 +15,6 @@ internal data class HomeVideoNavigationIntent(
 
 internal sealed interface HomeNavigationTarget {
     data class Video(val route: String) : HomeNavigationTarget
-    data class PortraitStory(
-        val bvid: String,
-        val cid: Long,
-        val coverUrl: String
-    ) : HomeNavigationTarget
     data class DynamicDetail(val dynamicId: String) : HomeNavigationTarget
 }
 
@@ -53,8 +48,7 @@ internal fun resolveHomeVideoRoute(request: HomeVideoClickRequest): String? {
 }
 
 internal fun resolveHomeNavigationTarget(
-    request: HomeVideoClickRequest,
-    directPortraitStoryEntry: Boolean = false
+    request: HomeVideoClickRequest
 ): HomeNavigationTarget? {
     val normalizedDynamicId = request.dynamicId.trim()
     val normalizedBvid = request.bvid.trim()
@@ -62,19 +56,6 @@ internal fun resolveHomeNavigationTarget(
     // 非 BV 的占位 bvid（例如动态卡片）优先走动态详情
     if (normalizedDynamicId.isNotEmpty() && !normalizedBvid.startsWith("BV", ignoreCase = true)) {
         return HomeNavigationTarget.DynamicDetail(normalizedDynamicId)
-    }
-
-    val intent = resolveHomeVideoNavigationIntent(request)
-    if (
-        directPortraitStoryEntry &&
-        intent != null &&
-        intent.isVerticalVideo
-    ) {
-        return HomeNavigationTarget.PortraitStory(
-            bvid = intent.bvid,
-            cid = intent.cid,
-            coverUrl = intent.coverUrl
-        )
     }
 
     val videoRoute = resolveHomeVideoRoute(request)

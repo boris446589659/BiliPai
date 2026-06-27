@@ -4247,6 +4247,8 @@ object SettingsManager {
     private val KEY_PORTRAIT_FULLSCREEN_ENABLED = booleanPreferencesKey("portrait_fullscreen_enabled")
     private val KEY_AUTO_PORTRAIT_FULLSCREEN = booleanPreferencesKey("auto_portrait_fullscreen")
     private val KEY_LAUNCH_TO_PORTRAIT_FEED_ON_STARTUP = booleanPreferencesKey("launch_to_portrait_feed_on_startup")
+    private const val PORTRAIT_STARTUP_CACHE_PREFS = "portrait_startup_cache"
+    private const val CACHE_KEY_LAUNCH_TO_PORTRAIT_FEED = "enabled"
     private val KEY_VERTICAL_VIDEO_RATIO = floatPreferencesKey("vertical_video_ratio")
     
     // --- 竖屏全屏功能开关 (默认开启) ---
@@ -4281,6 +4283,26 @@ object SettingsManager {
     suspend fun setLaunchToPortraitFeedOnStartup(context: Context, value: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[KEY_LAUNCH_TO_PORTRAIT_FEED_ON_STARTUP] = value
+        }
+        context.getSharedPreferences(PORTRAIT_STARTUP_CACHE_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(CACHE_KEY_LAUNCH_TO_PORTRAIT_FEED, value)
+            .apply()
+    }
+
+    fun isLaunchToPortraitFeedOnStartupSync(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PORTRAIT_STARTUP_CACHE_PREFS, Context.MODE_PRIVATE)
+        if (prefs.contains(CACHE_KEY_LAUNCH_TO_PORTRAIT_FEED)) {
+            return prefs.getBoolean(CACHE_KEY_LAUNCH_TO_PORTRAIT_FEED, false)
+        }
+        return try {
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                context.settingsDataStore.data.first()[KEY_LAUNCH_TO_PORTRAIT_FEED_ON_STARTUP] ?: false
+            }.also { value ->
+                prefs.edit().putBoolean(CACHE_KEY_LAUNCH_TO_PORTRAIT_FEED, value).apply()
+            }
+        } catch (_: Exception) {
+            false
         }
     }
     

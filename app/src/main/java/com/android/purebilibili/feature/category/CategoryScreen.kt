@@ -104,7 +104,7 @@ fun CategoryScreen(
     tid: Int,
     name: String,
     onBack: () -> Unit,
-    onVideoClick: (String, Long, String) -> Unit = { _, _, _ -> },
+    onVideoClick: (String, Long, String, Boolean) -> Unit = { _, _, _, _ -> },
     isReturningFromVideoDetail: Boolean = false,
     isQuickReturningFromVideoDetail: Boolean = false,
     viewModel: CategoryViewModel = viewModel()
@@ -247,7 +247,9 @@ fun CategoryScreen(
                                     showOnlineCount = showOnlineCount,
                                     isReturningFromVideoDetail = isReturningFromVideoDetail,
                                     isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
-                                    onClick = { bvid, _ -> onVideoClick(bvid, video.id, video.pic) }
+                                    onClick = { bvid, _ ->
+                                        onVideoClick(bvid, video.id, video.pic, video.isVertical)
+                                    }
                                 )
                             }
                             else -> {
@@ -263,7 +265,9 @@ fun CategoryScreen(
                                     showOnlineCount = showOnlineCount,
                                     isReturningFromVideoDetail = isReturningFromVideoDetail,
                                     isQuickReturningFromVideoDetail = isQuickReturningFromVideoDetail,
-                                    onClick = { bvid, _ -> onVideoClick(bvid, video.id, video.pic) }
+                                    onClick = { bvid, _ ->
+                                        onVideoClick(bvid, video.id, video.pic, video.isVertical)
+                                    }
                                 )
                             }
                         }
