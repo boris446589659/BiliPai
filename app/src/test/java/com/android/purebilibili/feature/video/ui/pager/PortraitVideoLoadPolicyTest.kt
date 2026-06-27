@@ -158,6 +158,73 @@ class PortraitVideoLoadPolicyTest {
     }
 
     @Test
+    fun swipePrefetchTargetPage_triggersWhenSwipingDownPastThreshold() {
+        assertEquals(
+            2,
+            resolvePortraitSwipePrefetchTargetPage(
+                isScrollInProgress = true,
+                currentPage = 1,
+                currentPageOffsetFraction = -0.3f,
+                lastPageIndex = 4
+            )
+        )
+    }
+
+    @Test
+    fun swipePrefetchTargetPage_triggersWhenSwipingUpPastThreshold() {
+        assertEquals(
+            0,
+            resolvePortraitSwipePrefetchTargetPage(
+                isScrollInProgress = true,
+                currentPage = 1,
+                currentPageOffsetFraction = 0.3f,
+                lastPageIndex = 4
+            )
+        )
+    }
+
+    @Test
+    fun swipePrefetchTargetPage_ignoresSmallOffsetAndSettledPager() {
+        assertNull(
+            resolvePortraitSwipePrefetchTargetPage(
+                isScrollInProgress = true,
+                currentPage = 1,
+                currentPageOffsetFraction = -0.1f,
+                lastPageIndex = 4
+            )
+        )
+        assertNull(
+            resolvePortraitSwipePrefetchTargetPage(
+                isScrollInProgress = false,
+                currentPage = 1,
+                currentPageOffsetFraction = -0.8f,
+                lastPageIndex = 4
+            )
+        )
+    }
+
+    @Test
+    fun earlyPlaybackPage_requiresHigherOffsetThanPrefetch() {
+        assertNull(
+            resolvePortraitEarlyPlaybackPage(
+                isScrollInProgress = true,
+                currentPage = 1,
+                currentPageOffsetFraction = -0.3f,
+                lastPageIndex = 4
+            )
+        )
+        assertEquals(
+            2,
+            resolvePortraitEarlyPlaybackPage(
+                isScrollInProgress = true,
+                currentPage = 1,
+                currentPageOffsetFraction = -0.6f,
+                lastPageIndex = 4
+            )
+        )
+    }
+
+    @Test
     fun playUrlPreloadTargets_collectsUpcomingPagesWithoutDuplicates() {
         val targets = resolvePortraitPlayUrlPreloadTargets(
             committedPage = 0,

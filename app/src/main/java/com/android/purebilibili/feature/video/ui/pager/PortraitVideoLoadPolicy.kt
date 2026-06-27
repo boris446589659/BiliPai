@@ -20,6 +20,8 @@ import com.android.purebilibili.feature.video.viewmodel.buildPlaybackAudioUrlCan
 import kotlin.math.min
 
 internal const val PORTRAIT_PLAYBACK_TARGET_QUALITY = 64
+internal const val PORTRAIT_SWIPE_PREFETCH_OFFSET_THRESHOLD = 0.25f
+internal const val PORTRAIT_EARLY_PLAYBACK_OFFSET_THRESHOLD = 0.58f
 
 internal data class PortraitPagePlaybackIdentity(
     val bvid: String,
@@ -125,6 +127,52 @@ internal fun resolvePortraitPlaybackCdnUrls(
         audioUrl = rewrite?.audioUrls?.firstOrNull()?.takeIf { it.isNotBlank() }
             ?: streamUrls.audioUrl
     )
+}
+
+internal fun resolvePortraitSwipePrefetchTargetPage(
+    isScrollInProgress: Boolean,
+    currentPage: Int,
+    currentPageOffsetFraction: Float,
+    lastPageIndex: Int,
+    prefetchThreshold: Float = PORTRAIT_SWIPE_PREFETCH_OFFSET_THRESHOLD
+): Int? {
+    if (!isScrollInProgress) return null
+    return when {
+        currentPageOffsetFraction <= -prefetchThreshold -> {
+            val targetPage = currentPage + 1
+            targetPage.takeIf { it <= lastPageIndex }
+        }
+
+        currentPageOffsetFraction >= prefetchThreshold -> {
+            val targetPage = currentPage - 1
+            targetPage.takeIf { it >= 0 }
+        }
+
+        else -> null
+    }
+}
+
+internal fun resolvePortraitEarlyPlaybackPage(
+    isScrollInProgress: Boolean,
+    currentPage: Int,
+    currentPageOffsetFraction: Float,
+    lastPageIndex: Int,
+    earlyPlaybackThreshold: Float = PORTRAIT_EARLY_PLAYBACK_OFFSET_THRESHOLD
+): Int? {
+    if (!isScrollInProgress) return null
+    return when {
+        currentPageOffsetFraction <= -earlyPlaybackThreshold -> {
+            val targetPage = currentPage + 1
+            targetPage.takeIf { it <= lastPageIndex }
+        }
+
+        currentPageOffsetFraction >= earlyPlaybackThreshold -> {
+            val targetPage = currentPage - 1
+            targetPage.takeIf { it >= 0 }
+        }
+
+        else -> null
+    }
 }
 
 internal fun resolvePortraitPlayUrlPreloadCount(
