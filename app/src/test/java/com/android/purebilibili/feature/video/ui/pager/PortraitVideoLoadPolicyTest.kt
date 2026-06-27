@@ -36,6 +36,16 @@ class PortraitVideoLoadPolicyTest {
     }
 
     @Test
+    fun parallelBootstrap_disablesForAidFallbackIdentifier() {
+        assertFalse(
+            shouldUsePortraitParallelPlaybackBootstrap(
+                bvid = "av12345",
+                requestedCid = 67890L
+            )
+        )
+    }
+
+    @Test
     fun pagePlaybackIdentity_readsCidFromRelatedVideo() {
         val identity = resolvePortraitPagePlaybackIdentity(
             RelatedVideo(

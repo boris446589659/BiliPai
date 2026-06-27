@@ -39,7 +39,7 @@ internal fun resolvePortraitPlaybackTargetQuality(): Int = PORTRAIT_PLAYBACK_TAR
 internal fun shouldUsePortraitParallelPlaybackBootstrap(
     bvid: String,
     requestedCid: Long
-): Boolean = bvid.isNotBlank() && requestedCid > 0L
+): Boolean = bvid.trim().startsWith("BV", ignoreCase = true) && requestedCid > 0L
 
 internal fun resolvePortraitPagePlaybackIdentity(item: Any): PortraitPagePlaybackIdentity? {
     return when (item) {
