@@ -677,7 +677,7 @@ fun IOSSwitchItem(
     val effectiveIconTint = rememberAdaptiveSemanticIconTint(iconTint, uiPreset)
     val cornerRadiusScale = LocalCornerRadiusScale.current
     val iconCornerRadius = if (uiPreset == UiPreset.MD3) visualSpec.iconCornerRadiusDp.dp else iOSCornerRadius.Small * cornerRadiusScale
-    if (uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX) {
+    if (shouldRouteIosSwitchItemToMiuixSwitchPreference(uiPreset, androidNativeVariant)) {
         val context = LocalContext.current
         val platformHaptic = LocalHapticFeedback.current
         val effectiveHaptic = if (SettingsManager.isHapticFeedbackEnabledSync(context)) {
@@ -836,13 +836,14 @@ fun IOSClickableItem(
     val effectiveIconTint = rememberAdaptiveSemanticIconTint(iconTint, uiPreset)
     val cornerRadiusScale = LocalCornerRadiusScale.current
     val iconCornerRadius = if (uiPreset == UiPreset.MD3) visualSpec.iconCornerRadiusDp.dp else iOSCornerRadius.Small * cornerRadiusScale
-    if (
-        uiPreset == UiPreset.MD3 &&
-        androidNativeVariant == AndroidNativeVariant.MIUIX &&
-        onClick != null &&
-        showChevron &&
-        !centered
-    ) {
+    val clickableRenderer = resolveIosClickableItemRenderer(
+        uiPreset = uiPreset,
+        androidNativeVariant = androidNativeVariant,
+        onClick = onClick,
+        showChevron = showChevron,
+        centered = centered
+    )
+    if (clickableRenderer == IosClickableItemRenderer.MIUIX_ARROW) {
         MiuixArrowPreference(
             title = title,
             titleColor = BasicComponentDefaults.titleColor(color = textColor),
@@ -913,7 +914,10 @@ fun IOSClickableItem(
         )
         return
     }
-    if (uiPreset == UiPreset.MD3) {
+    if (
+        clickableRenderer == IosClickableItemRenderer.MD3_BASIC ||
+        clickableRenderer == IosClickableItemRenderer.MIUIX_BASIC
+    ) {
         BasicComponent(
             title = title,
             summary = subtitle,
@@ -969,7 +973,7 @@ fun IOSClickableItem(
                 if (!value.isNullOrBlank()) {
                     Text(
                         text = value,
-                        style = if (androidNativeVariant == AndroidNativeVariant.MIUIX) {
+                        style = if (clickableRenderer == IosClickableItemRenderer.MIUIX_BASIC) {
                             MaterialTheme.typography.bodySmall
                         } else {
                             MaterialTheme.typography.bodyMedium

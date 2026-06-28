@@ -106,6 +106,25 @@ class MiuixV2MigrationStructureTest {
     }
 
     @Test
+    fun iosClickableItem_routesThroughAdaptiveListItemPolicy() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/ui/components/iOSListComponents.kt")
+        assertTrue(source.contains("resolveIosClickableItemRenderer("))
+        assertTrue(source.contains("IosClickableItemRenderer.MIUIX_ARROW"))
+        assertTrue(source.contains("IosClickableItemRenderer.MIUIX_BASIC"))
+        assertTrue(source.contains("shouldRouteIosSwitchItemToMiuixSwitchPreference("))
+    }
+
+    @Test
+    fun themeController_remembersUserThemeInputsWithMiuixBridgeColors() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/theme/Theme.kt")
+        assertTrue(source.contains("ThemeController("))
+        assertTrue(source.contains("customPrimaryColor,"))
+        assertTrue(source.contains("themeRoleOverrides,"))
+        assertTrue(source.contains("amoledDarkTheme,"))
+        assertTrue(source.contains("resolveMiuixColorsFromMaterialBridge("))
+    }
+
+    @Test
     fun miuixDockedBottomBar_usesOfficialNavigationBarItemForStandardItems() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
         assertTrue(source.contains("MiuixNavigationBarItem("))

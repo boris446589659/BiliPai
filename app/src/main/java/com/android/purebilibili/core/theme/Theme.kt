@@ -840,6 +840,12 @@ fun PureBiliBiliTheme(
         themeMode,
         dynamicColor,
         darkTheme,
+        customPrimaryColor,
+        themeRoleOverrides,
+        amoledDarkTheme,
+        colorStyle,
+        colorSpec,
+        systemWallpaperRefreshToken,
         miuixLightColors,
         miuixDarkColors
     ) {

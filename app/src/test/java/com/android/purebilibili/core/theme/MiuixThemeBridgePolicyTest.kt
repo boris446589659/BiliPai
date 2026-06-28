@@ -1,5 +1,7 @@
 package com.android.purebilibili.core.theme
 
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,5 +45,48 @@ class MiuixThemeBridgePolicyTest {
         assertEquals(Color(0xFFF8F9FF), materialScheme.surface)
         assertEquals(Color(0xFFECEEF4), materialScheme.surfaceContainer)
         assertEquals(Color(0xFFE6E8EE), materialScheme.surfaceContainerHigh)
+    }
+
+    @Test
+    fun `miuix colors follow amoled material surfaces from bridge`() {
+        val amoledScheme = applyAmoledSurfaceOverrides(
+            darkColorScheme(
+                primary = Color(0xFF84F2A4),
+                background = Color(0xFF101414),
+                surface = Color(0xFF161B1A),
+                surfaceContainer = Color(0xFF1E2523)
+            )
+        )
+        val bridge = createMiuixMaterialBridge(amoledScheme)
+        val miuixColors = resolveMiuixColorsFromMaterialBridge(
+            bridge = bridge,
+            darkTheme = true
+        )
+
+        assertEquals(Color(0xFF84F2A4), miuixColors.primary)
+        assertEquals(Color.Black, miuixColors.background)
+        assertEquals(Color.Black, miuixColors.surface)
+        assertEquals(Color(0xFF090909), miuixColors.surfaceContainer)
+    }
+
+    @Test
+    fun `miuix colors track custom seed primary from material bridge`() {
+        val seedPrimary = Color(0xFFFF5722)
+        val bridge = createMiuixMaterialBridge(
+            lightColorScheme(
+                primary = seedPrimary,
+                onPrimary = Color.White,
+                background = Color(0xFFFFF8F6),
+                surface = Color(0xFFFFF8F6),
+                surfaceContainer = Color(0xFFFFEDE8)
+            )
+        )
+        val miuixColors = resolveMiuixColorsFromMaterialBridge(
+            bridge = bridge,
+            darkTheme = false
+        )
+
+        assertEquals(seedPrimary, miuixColors.primary)
+        assertEquals(Color(0xFFFFF8F6), miuixColors.background)
     }
 }
