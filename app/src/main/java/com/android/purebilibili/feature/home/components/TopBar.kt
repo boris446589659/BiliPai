@@ -54,6 +54,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
@@ -93,8 +95,13 @@ import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.android.purebilibili.feature.home.components.liquid.rememberCombinedBackdrop as rememberMiuixCombinedBackdrop
 import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
+import top.yukonga.miuix.kmp.blur.LayerBackdrop as MiuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.blur as miuixBlur
+import top.yukonga.miuix.kmp.blur.drawBackdrop as miuixDrawBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
+import com.android.purebilibili.feature.home.components.liquid.lens as miuixLens
+import com.android.purebilibili.feature.home.components.liquid.vibrancy as miuixVibrancy
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -1031,8 +1038,11 @@ private fun LightweightHomeTopTabs(
             verticalProgress = 0f,
             pressProgress = topTabPressProgress
         )
+        val topTabCaptureLensSpec = resolveBottomBarBackdropPresetCaptureLens(
+            progress = topTabBackdropPresetProgress.captureProgress
+        )
         val topTabIndicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
-            progress = topTabBackdropPresetProgress.indicatorProgress
+            progress = topTabPressProgress
         )
         val topTabIndicatorHighlightAlpha = resolveBottomBarLiquidGlassHighlightAlpha(
             motionProgress = topTabBackdropPresetProgress.indicatorProgress
@@ -1135,6 +1145,31 @@ private fun LightweightHomeTopTabs(
         } else {
             null
         }
+        val shouldRenderTopTabRefractionCaptureRaw = shouldRenderBottomBarRefractionCapture(
+            glassEnabled = shouldUseLiquidGlassIndicator,
+            hasBackdrop = miuixBackdrop != null,
+            captureProgress = topTabBackdropPresetProgress.captureProgress,
+            isTransitionRunning = isTransitionRunning,
+            isFeedScrollInProgress = false,
+            isBottomBarInteractionActive = isTopTabIndicatorInteractionActive
+        )
+        val shouldRenderTopTabRefractionCapture =
+            topTabGlassLayersAlwaysOn || shouldRenderTopTabRefractionCaptureRaw
+        val shouldRenderTopTabIndicatorContentCapture = shouldRenderTopTabIndicatorContentCapture(
+            shouldPrimeCapture = shouldPrimeTopTabLiquidGlassCapture,
+            shouldRenderRefractionCapture = shouldRenderTopTabRefractionCapture,
+            isPressActive = topTabPressProgress > 0.001f
+        )
+        val colorScheme = MaterialTheme.colorScheme
+        val topTabThemeColor = when (effectiveRenderer) {
+            HomeTopTabRenderer.IOS -> resolveIosTopTabSelectedContentColor(colorScheme)
+            HomeTopTabRenderer.MD3 -> colorScheme.primary
+            HomeTopTabRenderer.MIUIX -> colorScheme.onSecondaryContainer
+        }
+        val topTabExportTintColor = resolveAndroidNativeExportTintColor(
+            themeColor = topTabThemeColor,
+            darkTheme = isDarkTheme
+        )
         val usesMeasuredCapsuleAlignment = shouldUseMovingIosCapsule || shouldUseMd3DockBackedCapsule
         val measuredSelectedItemLeftPx by remember(usesMeasuredCapsuleAlignment) {
             derivedStateOf {
@@ -1232,18 +1267,42 @@ private fun LightweightHomeTopTabs(
                         tabViewportLeftInWindowPx = coordinates.boundsInWindow().left
                     }
             ) {
+                if (shouldRenderTopTabIndicatorContentCapture && miuixBackdrop != null) {
+                    TopTabIndicatorExportCaptureLayer(
+                        listState = listState,
+                        categories = categories,
+                        categoryKeys = categoryKeys,
+                        effectiveRenderer = effectiveRenderer,
+                        selectedIndex = selectedIndex,
+                        showIcon = showIcon,
+                        showText = showText,
+                        itemWidth = itemWidth,
+                        skinPlainStyle = skinPlainStyle,
+                        skinPlainContentColor = skinPlainContentColor,
+                        usesSharedCapsuleIndicator = usesSharedCapsuleIndicator,
+                        liquidGlassEnabled = shouldUseLiquidGlassIndicator,
+                        indicatorPosition = topTabIndicatorPosition,
+                        motionProgress = topTabMotionProgress,
+                        selectionEmphasis = topTabRefractionMotionProfile.exportSelectionEmphasis,
+                        topTabSkinIconPaths = topTabSkinIconPaths,
+                        hasSkinStickerIcons = hasSkinStickerIcons,
+                        contentPadding = if (effectiveRenderer == HomeTopTabRenderer.IOS) {
+                            IOS_TOP_TAB_CONTENT_PADDING_DP.dp
+                        } else {
+                            md3ContentPadding
+                        },
+                        topTabContentBackdrop = topTabContentBackdrop,
+                        miuixBackdrop = miuixBackdrop,
+                        captureLensSpec = topTabCaptureLensSpec,
+                        panelOffsetPx = topTabPanelOffsetPx,
+                        exportTintColor = topTabExportTintColor
+                    )
+                }
                 LazyRow(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(1f)
-                        .run {
-                            if (shouldPrimeTopTabLiquidGlassCapture) {
-                                miuixLayerBackdrop(topTabContentBackdrop)
-                            } else {
-                                this
-                            }
-                        },
+                        .zIndex(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
                     contentPadding = PaddingValues(
@@ -1461,8 +1520,11 @@ private fun LightweightHomeTopTabs(
                             backdrop = miuixBackdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabPressProgress,
-                            indicatorIdleSurfaceColor = indicatorColor.copy(alpha = 0.42f),
+                            indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
+                                darkTheme = isDarkTheme
+                            ),
                             glassEnabled = true,
+                            indicatorEffectsEnabled = true,
                             motionProgress = topTabMotionProgress,
                             velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
                             isDragging = topTabShouldStretchIndicator,
@@ -1541,6 +1603,101 @@ private fun LightweightHomeTopTabs(
 }
 
 @Composable
+private fun TopTabIndicatorExportCaptureLayer(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    categories: List<String>,
+    categoryKeys: List<String>,
+    effectiveRenderer: HomeTopTabRenderer,
+    selectedIndex: Int,
+    showIcon: Boolean,
+    showText: Boolean,
+    itemWidth: Dp,
+    skinPlainStyle: Boolean,
+    skinPlainContentColor: Color?,
+    usesSharedCapsuleIndicator: Boolean,
+    liquidGlassEnabled: Boolean,
+    indicatorPosition: Float,
+    motionProgress: Float,
+    selectionEmphasis: Float,
+    topTabSkinIconPaths: Map<String, TopTabSkinIconPaths>,
+    hasSkinStickerIcons: Boolean,
+    contentPadding: Dp,
+    topTabContentBackdrop: MiuixLayerBackdrop,
+    miuixBackdrop: MiuixBackdrop,
+    captureLensSpec: BottomBarBackdropPresetLensSpec,
+    panelOffsetPx: Float,
+    exportTintColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clearAndSetSemantics {}
+            .alpha(0f)
+            .zIndex(0f)
+            .miuixLayerBackdrop(topTabContentBackdrop)
+            .graphicsLayer { translationX = panelOffsetPx }
+            .miuixDrawBackdrop(
+                backdrop = miuixBackdrop,
+                shape = { RectangleShape },
+                effects = {
+                    if (shouldUseBottomBarCaptureLens(liquidGlassEnabled)) {
+                        miuixVibrancy()
+                        miuixBlur(4.dp.toPx(), 4.dp.toPx())
+                        miuixLens(
+                            refractionHeight = captureLensSpec.refractionHeightDp.dp.toPx(),
+                            refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx()
+                        )
+                    }
+                },
+                onDrawSurface = {
+                    drawRect(Color.Transparent)
+                }
+            )
+            .graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))
+    ) {
+        LazyRow(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
+            contentPadding = PaddingValues(horizontal = contentPadding)
+        ) {
+            itemsIndexed(
+                items = categories,
+                key = { index, category -> categoryKeys.getOrNull(index) ?: category }
+            ) { index, category ->
+                val categoryKey = categoryKeys.getOrNull(index) ?: category
+                val selectionFraction = (1f - abs(indicatorPosition - index.toFloat())).coerceIn(0f, 1f)
+                LightweightTopTabItem(
+                    renderer = effectiveRenderer,
+                    category = category,
+                    categoryKey = categoryKey,
+                    index = index,
+                    selectionFraction = selectionFraction,
+                    selectedIndex = selectedIndex,
+                    showIcon = showIcon,
+                    showText = showText,
+                    itemWidth = itemWidth,
+                    skinPlainStyle = skinPlainStyle,
+                    skinPlainContentColor = skinPlainContentColor,
+                    drawContainer = false,
+                    usesSharedCapsuleIndicator = usesSharedCapsuleIndicator,
+                    liquidGlassEnabled = liquidGlassEnabled,
+                    indicatorPosition = indicatorPosition,
+                    motionProgress = motionProgress,
+                    selectionEmphasis = selectionEmphasis,
+                    skinIconPaths = topTabSkinIconPaths[categoryKey.trim().uppercase()],
+                    hasSkinStickerIcon = hasSkinStickerIcons,
+                    isExportLayer = true,
+                    useClickIndication = false,
+                    onClick = {}
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun LightweightTopTabItem(
     renderer: HomeTopTabRenderer,
     category: String,
@@ -1561,6 +1718,7 @@ private fun LightweightTopTabItem(
     selectionEmphasis: Float = 1f,
     skinIconPaths: TopTabSkinIconPaths? = null,
     hasSkinStickerIcon: Boolean = false,
+    isExportLayer: Boolean = false,
     useClickIndication: Boolean = true,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -1601,13 +1759,22 @@ private fun LightweightTopTabItem(
             motionProgress = motionProgress,
             selectionEmphasis = selectionEmphasis
         )
-        resolveBottomBarGlassVisibleContentColor(
-            unselectedColor = unselectedColor,
-            selectedColor = selectedColor,
-            themeWeight = motionVisual.themeWeight,
-            glassEnabled = true,
-            indicatorProgress = motionProgress
-        )
+        if (isExportLayer) {
+            resolveBottomBarGlassExportContentColor(
+                unselectedColor = unselectedColor,
+                selectedColor = selectedColor,
+                themeWeight = motionVisual.themeWeight,
+                glassEnabled = true
+            )
+        } else {
+            resolveBottomBarGlassVisibleContentColor(
+                unselectedColor = unselectedColor,
+                selectedColor = selectedColor,
+                themeWeight = motionVisual.themeWeight,
+                glassEnabled = true,
+                indicatorProgress = motionProgress
+            )
+        }
     } else {
         androidx.compose.ui.graphics.lerp(
             unselectedColor,
@@ -2132,6 +2299,14 @@ internal data class TopTabIndicatorBackdropPolicy(
     val useIndicatorBackdrop: Boolean,
     val useCombinedBackdrop: Boolean
 )
+
+internal fun shouldRenderTopTabIndicatorContentCapture(
+    shouldPrimeCapture: Boolean,
+    shouldRenderRefractionCapture: Boolean,
+    isPressActive: Boolean
+): Boolean {
+    return shouldPrimeCapture && (shouldRenderRefractionCapture || isPressActive)
+}
 
 internal fun resolveTopTabIndicatorBackdropPolicy(
     effectiveLiquidGlassEnabled: Boolean,

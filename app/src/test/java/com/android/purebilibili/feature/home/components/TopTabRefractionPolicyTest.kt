@@ -76,6 +76,31 @@ class TopTabRefractionPolicyTest {
     }
 
     @Test
+    fun `top tab indicator content capture follows bottom bar glass policy`() {
+        assertTrue(
+            shouldRenderTopTabIndicatorContentCapture(
+                shouldPrimeCapture = true,
+                shouldRenderRefractionCapture = true,
+                isPressActive = false
+            )
+        )
+        assertTrue(
+            shouldRenderTopTabIndicatorContentCapture(
+                shouldPrimeCapture = true,
+                shouldRenderRefractionCapture = false,
+                isPressActive = true
+            )
+        )
+        assertFalse(
+            shouldRenderTopTabIndicatorContentCapture(
+                shouldPrimeCapture = false,
+                shouldRenderRefractionCapture = true,
+                isPressActive = true
+            )
+        )
+    }
+
+    @Test
     fun `liquid top tab refraction forces chromatic aberration during motion`() {
         val profile = resolveTopTabRefractionMotionProfile(
             shouldRefract = true,
@@ -368,8 +393,12 @@ class TopTabRefractionPolicyTest {
         assertFalse(source.contains("rememberCombinedBackdrop(backdrop, tabsBackdrop)"))
         assertTrue(source.contains("rememberMiuixCombinedBackdrop(miuixBackdrop, topTabContentBackdrop)"))
         assertTrue(source.contains("backdrop = miuixBackdrop"))
-        assertTrue(source.contains("if (shouldPrimeTopTabLiquidGlassCapture)"))
-        assertTrue(source.contains("miuixLayerBackdrop(topTabContentBackdrop)"))
+        assertTrue(source.contains("shouldRenderTopTabIndicatorContentCapture("))
+        assertTrue(source.contains("TopTabIndicatorExportCaptureLayer("))
+        assertTrue(source.contains("ColorFilter.tint(exportTintColor)"))
+        assertTrue(source.contains("resolveBottomBarBackdropPresetCaptureLens("))
+        assertTrue(source.contains("progress = topTabPressProgress"))
+        assertFalse(source.contains("if (shouldPrimeTopTabLiquidGlassCapture) {\n                                miuixLayerBackdrop(topTabContentBackdrop)"))
     }
 
     @Test
