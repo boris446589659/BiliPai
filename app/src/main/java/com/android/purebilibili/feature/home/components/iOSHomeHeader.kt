@@ -2217,6 +2217,7 @@ fun iOSHomeHeader(
                 motionTier = motionTier,
                 isTransitionRunning = isTransitionRunning,
                 forceLowBlurBudget = forceLowBlurBudget,
+                isFeedScrollInProgress = isScrolling,
                 isViewportSyncEnabled = isTopTabViewportSyncEnabled,
                 skinPlainStyle = shouldUseSkinPlainTopTabs,
                 skinPlainContentColor = null,

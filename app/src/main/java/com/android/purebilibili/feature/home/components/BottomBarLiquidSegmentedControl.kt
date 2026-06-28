@@ -174,10 +174,22 @@ internal fun resolveSegmentedControlSweepSelectionIndex(
 internal fun shouldDrawSegmentedControlIndicatorBackdrop(
     liquidGlassEnabled: Boolean,
     motionProgress: Float,
-    hasExternalBackdrop: Boolean
+    hasExternalBackdrop: Boolean,
+    isFeedScrollInProgress: Boolean = false,
+    isInteractionActive: Boolean = false
 ): Boolean {
     if (!liquidGlassEnabled) return false
+    if (isFeedScrollInProgress && !isInteractionActive) return false
     return hasExternalBackdrop || motionProgress > 0.001f
+}
+
+internal fun shouldRenderSegmentedControlIndicatorContentBackdrop(
+    liquidGlassEnabled: Boolean,
+    isFeedScrollInProgress: Boolean,
+    isInteractionActive: Boolean
+): Boolean {
+    if (!liquidGlassEnabled) return false
+    return !isFeedScrollInProgress || isInteractionActive
 }
 
 internal fun shouldRenderSegmentedControlHiddenCaptureLayer(
@@ -433,7 +445,11 @@ fun BottomBarLiquidSegmentedControl(
     itemCategoryKeys: List<String>? = null,
     showIcon: Boolean = false,
     showText: Boolean = true,
-    topTabLabelMode: Int = 2
+    topTabLabelMode: Int = 2,
+    externalInteractionActive: Boolean = false,
+    externalInteractionVelocityPxPerSecond: Float = 0f,
+    externalInteractionMotionProgress: Float = 0f,
+    isFeedScrollInProgress: Boolean = false
 ) {
     if (items.isEmpty()) return
 
@@ -588,20 +604,33 @@ fun BottomBarLiquidSegmentedControl(
         val pressMotionProgress by remember {
             derivedStateOf { dragState.pressProgress }
         }
+        val dragInteractionActive = dragState.isDragging ||
+            dragState.isRunning ||
+            dragState.pressProgress > 0.001f
+        val interactionActive = dragInteractionActive || externalInteractionActive
+        val interactionVelocityPxPerSecond = when {
+            dragState.isDragging -> dragState.velocityPxPerSecond
+            externalInteractionActive -> externalInteractionVelocityPxPerSecond
+            else -> 0f
+        }
         val refractionMotionProfile = resolveBottomBarRefractionMotionProfile(
             position = indicatorPosition,
-            velocity = dragState.velocityPxPerSecond,
-            isDragging = dragState.isDragging,
+            velocity = interactionVelocityPxPerSecond,
+            isDragging = interactionActive,
             motionSpec = motionSpec
         )
-        val motionProgress = resolveSegmentedControlMotionProgress(
+        val dragMotionProgress = resolveSegmentedControlMotionProgress(
             pressProgress = pressMotionProgress,
             refractionProgress = refractionMotionProfile.progress,
             tapPressRefractionEnabled = tapPressRefractionEnabled
         )
+        val motionProgress = maxOf(
+            dragMotionProgress,
+            if (externalInteractionActive) externalInteractionMotionProgress else 0f
+        )
         val tapPressProgress = if (tapPressRefractionEnabled) pressMotionProgress else 0f
         val indicatorDragScaleProgress = rememberBottomBarIndicatorDragScaleProgress(
-            isDragging = dragState.isDragging
+            isDragging = dragState.isDragging || externalInteractionActive
         )
         val indicatorLayerScaleProgress = maxOf(indicatorDragScaleProgress, tapPressProgress)
         val indicatorLayerScaleTransform = BottomBarIndicatorLayerTransform(
@@ -619,15 +648,21 @@ fun BottomBarLiquidSegmentedControl(
             }
         }
         val tabsBackdrop = rememberMiuixLayerBackdrop()
+        val shouldRenderIndicatorContentBackdrop = shouldRenderSegmentedControlIndicatorContentBackdrop(
+            liquidGlassEnabled = liquidGlassEnabled,
+            isFeedScrollInProgress = isFeedScrollInProgress,
+            isInteractionActive = interactionActive
+        )
         val indicatorContentBackdrop = when {
-            liquidGlassEnabled && hasExternalBackdrop ->
+            !shouldRenderIndicatorContentBackdrop -> null
+            hasExternalBackdrop ->
                 rememberMiuixCombinedBackdrop(miuixBackdrop, tabsBackdrop)
             liquidGlassEnabled -> tabsBackdrop
             else -> null
         }
         val shouldRenderHiddenCapture = shouldRenderSegmentedControlHiddenCaptureLayer(
             liquidGlassEnabled = liquidGlassEnabled
-        )
+        ) && shouldRenderIndicatorContentBackdrop
         val applyExportThemeTint = shouldApplySegmentedControlExportThemeTint(
             hasExternalBackdrop = hasExternalBackdrop
         )
@@ -760,8 +795,14 @@ fun BottomBarLiquidSegmentedControl(
             indicatorIdleSurfaceColor = resolvedIndicatorIdleSurfaceColor,
             glassEnabled = liquidGlassEnabled,
             motionProgress = motionProgress,
-            velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
-            isDragging = dragState.isDragging,
+            velocityItemsPerSecond = if (dragState.isDragging) {
+                dragState.deformationVelocityItemsPerSecond
+            } else if (externalInteractionActive) {
+                externalInteractionVelocityPxPerSecond / itemWidthPx.coerceAtLeast(1f)
+            } else {
+                0f
+            },
+            isDragging = interactionActive,
             indicatorLayerScaleProgress = indicatorLayerScaleProgress,
             indicatorLayerScaleTransform = indicatorLayerScaleTransform,
             bottomBarMotionSpec = motionSpec,

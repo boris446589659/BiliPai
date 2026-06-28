@@ -724,10 +724,12 @@ private fun HomeTopTabLiquidSegmentedTabs(
     renderer: HomeTopTabRenderer,
     hasOuterChromeSurface: Boolean,
     miuixBackdrop: MiuixBackdrop?,
-    showPartitionAction: Boolean
+    showPartitionAction: Boolean,
+    isFeedScrollInProgress: Boolean = false
 ) {
     val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
     val scrollChannel = com.android.purebilibili.feature.home.LocalHomeScrollChannel.current
+    val density = LocalDensity.current
     val colorScheme = MaterialTheme.colorScheme
     val normalizedLabelMode = normalizeTopTabLabelMode(labelMode)
     val showIcon = shouldShowTopTabIcon(normalizedLabelMode)
@@ -788,10 +790,36 @@ private fun HomeTopTabLiquidSegmentedTabs(
         liquidGlassEnabled = true,
         hasOuterChromeSurface = hasOuterChromeSurface
     )
+    val usePageBackdrop = shouldTopTabSegmentedControlUsePageBackdrop(
+        hasOuterChromeSurface = hasOuterChromeSurface
+    )
+    val segmentedMiuixBackdrop = if (usePageBackdrop) miuixBackdrop else null
     val captureSurfaceColor = if (hasOuterChromeSurface) {
-        Color.Transparent
+        colorScheme.surfaceContainer.copy(alpha = 0.4f)
     } else {
         null
+    }
+    val topTabMotionSpec = remember {
+        resolveBottomBarMotionSpec(profile = BottomBarMotionProfile.ANDROID_NATIVE_FLOATING)
+    }
+    val pagerVelocityPositionTracker = remember { floatArrayOf(pagerPosition) }
+    val pagerVelocityTimeTracker = remember { longArrayOf(System.nanoTime()) }
+    val pagerInteractionActive = isTopTabPagerInteractionActive(
+        pagerIsDragging = pagerIsDragging,
+        pagerIsScrolling = pagerIsScrolling
+    )
+    val pagerVelocityItemsPerSecond = if (pagerInteractionActive) {
+        resolveTopTabPagerVelocityItemsPerSecond(
+            currentPosition = pagerPosition,
+            previousPosition = pagerVelocityPositionTracker[0],
+            elapsedNanos = (System.nanoTime() - pagerVelocityTimeTracker[0]).coerceAtLeast(1L)
+        )
+    } else {
+        0f
+    }
+    SideEffect {
+        pagerVelocityPositionTracker[0] = pagerPosition
+        pagerVelocityTimeTracker[0] = System.nanoTime()
     }
     BoxWithConstraints(
         modifier = Modifier
@@ -825,6 +853,23 @@ private fun HomeTopTabLiquidSegmentedTabs(
             minHeightDp = if (hasOuterChromeSurface) 30f else 30f,
             indicatorWidthDp = indicatorWidth.value
         ).dp
+        val slotWidthPx = with(density) { slotWidth.toPx() }.coerceAtLeast(1f)
+        val pagerVelocityPxPerSecond = pagerVelocityItemsPerSecond * slotWidthPx
+        val pagerRefractionMotionProfile = resolveBottomBarRefractionMotionProfile(
+            position = pagerPosition,
+            velocity = pagerVelocityPxPerSecond,
+            isDragging = pagerInteractionActive,
+            motionSpec = topTabMotionSpec
+        )
+        val pagerInteractionMotionProgress = if (pagerInteractionActive) {
+            resolveSegmentedControlMotionProgress(
+                pressProgress = 0f,
+                refractionProgress = pagerRefractionMotionProfile.progress,
+                tapPressRefractionEnabled = true
+            )
+        } else {
+            0f
+        }
         BottomBarLiquidSegmentedControl(
             items = categories,
             selectedIndex = safeSelectedIndex,
@@ -843,7 +888,7 @@ private fun HomeTopTabLiquidSegmentedTabs(
             labelFontSize = labelFontSize,
             liquidGlassEffectsEnabled = true,
             forceLiquidChrome = true,
-            miuixBackdrop = miuixBackdrop,
+            miuixBackdrop = segmentedMiuixBackdrop,
             selectedTextColorOverride = selectedTextColor,
             containerColorOverride = captureSurfaceColor,
             drawContainerShell = drawContainerShell,
@@ -852,7 +897,11 @@ private fun HomeTopTabLiquidSegmentedTabs(
             itemCategoryKeys = categoryKeys,
             showIcon = showIcon,
             showText = showText,
-            topTabLabelMode = normalizedLabelMode
+            topTabLabelMode = normalizedLabelMode,
+            externalInteractionActive = pagerInteractionActive,
+            externalInteractionVelocityPxPerSecond = pagerVelocityPxPerSecond,
+            externalInteractionMotionProgress = pagerInteractionMotionProgress,
+            isFeedScrollInProgress = isFeedScrollInProgress
         )
     }
 }
@@ -880,6 +929,7 @@ private fun LightweightHomeTopTabs(
     partitionSkinIconPath: String? = null,
     hasOuterChromeSurface: Boolean = false,
     isTransitionRunning: Boolean = false,
+    isFeedScrollInProgress: Boolean = false,
     showPartitionAction: Boolean = true,
     forceMaterialUnderline: Boolean = false
 ) {
@@ -953,7 +1003,8 @@ private fun LightweightHomeTopTabs(
             renderer = effectiveRenderer,
             hasOuterChromeSurface = hasOuterChromeSurface,
             miuixBackdrop = miuixBackdrop,
-            showPartitionAction = showPartitionAction
+            showPartitionAction = showPartitionAction,
+            isFeedScrollInProgress = isFeedScrollInProgress
         )
         return
     }
@@ -2097,6 +2148,7 @@ fun CategoryTabRow(
     motionTier: MotionTier = MotionTier.Normal,
     isTransitionRunning: Boolean = false,
     forceLowBlurBudget: Boolean = false,
+    isFeedScrollInProgress: Boolean = false,
     isViewportSyncEnabled: Boolean = true,
     skinPlainStyle: Boolean = false,
     skinPlainContentColor: Color? = null,
@@ -2147,6 +2199,7 @@ fun CategoryTabRow(
         partitionSkinIconPath = partitionSkinIconPath,
         hasOuterChromeSurface = hasOuterChromeSurface,
         isTransitionRunning = isTransitionRunning,
+        isFeedScrollInProgress = isFeedScrollInProgress,
         showPartitionAction = showPartitionAction,
         forceMaterialUnderline = forceMaterialUnderline
     )

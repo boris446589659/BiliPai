@@ -176,6 +176,35 @@ class BottomBarLiquidSegmentedControlStructureTest {
     }
 
     @Test
+    fun `feed scroll suppresses segmented indicator backdrop until direct interaction`() {
+        assertFalse(
+            shouldDrawSegmentedControlIndicatorBackdrop(
+                liquidGlassEnabled = true,
+                motionProgress = 0.5f,
+                hasExternalBackdrop = false,
+                isFeedScrollInProgress = true,
+                isInteractionActive = false
+            )
+        )
+        assertTrue(
+            shouldDrawSegmentedControlIndicatorBackdrop(
+                liquidGlassEnabled = true,
+                motionProgress = 0.5f,
+                hasExternalBackdrop = false,
+                isFeedScrollInProgress = true,
+                isInteractionActive = true
+            )
+        )
+        assertFalse(
+            shouldRenderSegmentedControlIndicatorContentBackdrop(
+                liquidGlassEnabled = true,
+                isFeedScrollInProgress = true,
+                isInteractionActive = false
+            )
+        )
+    }
+
+    @Test
     fun `segmented indicator only samples hidden tab backdrop while sliding without external backdrop`() {
         assertFalse(
             shouldDrawSegmentedControlIndicatorBackdrop(
@@ -286,9 +315,13 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertTrue(source.contains("val exportTintColor = resolveAndroidNativeExportTintColor("))
         assertTrue(source.contains(".graphicsLayer(colorFilter = ColorFilter.tint(exportTintColor))"))
         assertTrue(source.contains("val hasExternalBackdrop = miuixBackdrop != null"))
-        assertTrue(source.contains("liquidGlassEnabled && hasExternalBackdrop ->"))
+        assertTrue(source.contains("!shouldRenderIndicatorContentBackdrop -> null"))
+        assertTrue(source.contains("hasExternalBackdrop ->"))
         assertTrue(source.contains("liquidGlassEnabled -> tabsBackdrop"))
-        assertTrue(source.contains("rememberMiuixCombinedBackdrop(miuixBackdrop!!, tabsBackdrop)"))
+        assertTrue(source.contains("rememberMiuixCombinedBackdrop(miuixBackdrop, tabsBackdrop)"))
+        assertTrue(source.contains("shouldRenderSegmentedControlIndicatorContentBackdrop("))
+        assertTrue(source.contains("externalInteractionActive: Boolean = false"))
+        assertTrue(source.contains("isFeedScrollInProgress: Boolean = false"))
         assertTrue(source.contains("shouldRenderSegmentedControlHiddenCaptureLayer("))
         assertTrue(source.contains("shouldApplySegmentedControlExportThemeTint("))
         assertTrue(source.contains("shouldApplySegmentedControlCaptureBackdropEffects("))

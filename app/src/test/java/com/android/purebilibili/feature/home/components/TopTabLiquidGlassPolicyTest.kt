@@ -38,6 +38,42 @@ class TopTabLiquidGlassPolicyTest {
     }
 
     @Test
+    fun `outer dock shell suppresses inner page backdrop sampling`() {
+        assertFalse(shouldTopTabSegmentedControlUsePageBackdrop(hasOuterChromeSurface = true))
+        assertTrue(shouldTopTabSegmentedControlUsePageBackdrop(hasOuterChromeSurface = false))
+    }
+
+    @Test
+    fun `feed scroll suppresses top segmented indicator until direct interaction`() {
+        assertTrue(
+            shouldSuppressTopTabSegmentedIndicatorDuringFeedScroll(
+                isFeedScrollInProgress = true,
+                isInteractionActive = false
+            )
+        )
+        assertFalse(
+            shouldSuppressTopTabSegmentedIndicatorDuringFeedScroll(
+                isFeedScrollInProgress = true,
+                isInteractionActive = true
+            )
+        )
+        assertFalse(
+            shouldRenderSegmentedControlIndicatorContentBackdrop(
+                liquidGlassEnabled = true,
+                isFeedScrollInProgress = true,
+                isInteractionActive = false
+            )
+        )
+        assertTrue(
+            shouldRenderSegmentedControlIndicatorContentBackdrop(
+                liquidGlassEnabled = true,
+                isFeedScrollInProgress = true,
+                isInteractionActive = true
+            )
+        )
+    }
+
+    @Test
     fun `outer dock shell owns container glass and suppresses segmented shell duplication`() {
         assertFalse(
             shouldTopTabDrawSegmentedContainerShell(
@@ -123,6 +159,10 @@ class TopTabLiquidGlassPolicyTest {
         assertTrue(liquidBlock.contains("showIcon = showIcon"))
         assertTrue(liquidBlock.contains("showText = showText"))
         assertTrue(liquidBlock.contains("topTabLabelMode = normalizedLabelMode"))
+        assertTrue(liquidBlock.contains("shouldTopTabSegmentedControlUsePageBackdrop("))
+        assertTrue(liquidBlock.contains("segmentedMiuixBackdrop"))
+        assertTrue(liquidBlock.contains("isFeedScrollInProgress = isFeedScrollInProgress"))
+        assertTrue(liquidBlock.contains("externalInteractionActive = pagerInteractionActive"))
         assertTrue(
             source.contains("shouldTopTabUseLiquidSegmentedControl(") &&
                 source.contains("HomeTopTabLiquidSegmentedTabs(")

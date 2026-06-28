@@ -33,6 +33,19 @@ internal fun shouldTopTabDrawSegmentedCaptureBackdropEffects(
     return liquidGlassEnabled && !hasOuterChromeSurface
 }
 
+/**
+ * 外层 [HomeTopTabChrome] 已承担 shell 级视频采样时，内层分段控件只应使用
+ * [tabsBackdrop] 做指示器折射，避免与外壳双重采样造成色散叠加。
+ */
+internal fun shouldTopTabSegmentedControlUsePageBackdrop(
+    hasOuterChromeSurface: Boolean
+): Boolean = !hasOuterChromeSurface
+
+internal fun shouldSuppressTopTabSegmentedIndicatorDuringFeedScroll(
+    isFeedScrollInProgress: Boolean,
+    isInteractionActive: Boolean
+): Boolean = isFeedScrollInProgress && !isInteractionActive
+
 internal fun resolveTopTabLiquidIndicatorPosition(
     pagerPosition: Float,
     dragPosition: Float,
