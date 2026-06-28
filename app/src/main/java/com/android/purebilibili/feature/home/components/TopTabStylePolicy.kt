@@ -160,7 +160,7 @@ internal fun resolveHomeTopPresetStyle(
                     continuousSlabOverlap = 0.dp
                 ),
                 tabs = HomeTopTabsStyle(
-                    horizontalPadding = HomeTopDpPair(docked = 0.dp, floating = 14.dp),
+                    horizontalPadding = HomeTopDpPair(docked = 0.dp, floating = 4.dp),
                     rowHeight = HomeTopDpPair(
                         docked = if (isIconAndText) 58.dp else 56.dp,
                         floating = 62.dp
@@ -218,7 +218,7 @@ internal fun resolveHomeTopPresetStyle(
                     continuousSlabOverlap = 20.dp
                 ),
                 tabs = HomeTopTabsStyle(
-                    horizontalPadding = HomeTopDpPair(docked = 2.dp, floating = 8.dp),
+                    horizontalPadding = HomeTopDpPair(docked = 2.dp, floating = 4.dp),
                     rowHeight = HomeTopDpPair(
                         docked = if (isIconAndText) 56.dp else 48.dp,
                         floating = if (isIconAndText) 60.dp else 54.dp
@@ -276,7 +276,7 @@ internal fun resolveHomeTopPresetStyle(
                     continuousSlabOverlap = 24.dp
                 ),
                 tabs = HomeTopTabsStyle(
-                    horizontalPadding = HomeTopDpPair(docked = 4.dp, floating = 10.dp),
+                    horizontalPadding = HomeTopDpPair(docked = 4.dp, floating = 4.dp),
                     rowHeight = HomeTopDpPair(
                         docked = if (isIconAndText) 60.dp else 48.dp,
                         floating = if (isIconAndText) 62.dp else 52.dp

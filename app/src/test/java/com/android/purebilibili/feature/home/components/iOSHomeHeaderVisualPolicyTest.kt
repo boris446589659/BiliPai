@@ -510,8 +510,8 @@ class iOSHomeHeaderVisualPolicyTest {
         assertEquals(16.dp, resolveHomeTopSearchRowHorizontalPadding(UiPreset.MD3))
         assertEquals(44.dp, resolveHomeTopSearchPillHeight())
         assertEquals(44.dp, resolveHomeTopSearchPillHeight(UiPreset.MD3))
-        assertEquals(14.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true))
-        assertEquals(10.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true, uiPreset = UiPreset.MD3))
+        assertEquals(4.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true))
+        assertEquals(4.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true, uiPreset = UiPreset.MD3))
         assertEquals(4.dp, resolveHomeTopSearchToTabsSpacing())
         assertEquals(6.dp, resolveHomeTopSearchToTabsSpacing(UiPreset.MD3))
     }
