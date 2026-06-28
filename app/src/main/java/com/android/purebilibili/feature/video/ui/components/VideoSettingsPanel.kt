@@ -55,8 +55,8 @@ import com.android.purebilibili.core.ui.components.DefaultPlaybackSpeedPreferenc
 import com.android.purebilibili.core.ui.components.formatDefaultPlaybackSpeed
 import com.android.purebilibili.data.model.response.AiAudioInfo
 import com.android.purebilibili.feature.plugin.CdnLineDiagnostic
+import com.android.purebilibili.core.ui.AppSurfaceTokens
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private data class VideoSettingsPanelVisualSpec(
@@ -122,7 +122,7 @@ private fun videoSettingsChipContainerColor(isSelected: Boolean): Color {
     val uiPreset = LocalUiPreset.current
     val androidNativeVariant = LocalAndroidNativeVariant.current
     return if (uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX) {
-        if (isSelected) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.surfaceContainerHigh
+        if (isSelected) AppSurfaceTokens.secondaryContainer() else AppSurfaceTokens.surfaceContainerHigh()
     } else {
         if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
     }
@@ -133,7 +133,7 @@ private fun videoSettingsChipContentColor(isSelected: Boolean): Color {
     val uiPreset = LocalUiPreset.current
     val androidNativeVariant = LocalAndroidNativeVariant.current
     return if (uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX) {
-        if (isSelected) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSurfaceVariantSummary
+        if (isSelected) AppSurfaceTokens.onSecondaryContainer() else AppSurfaceTokens.onSurfaceVariantSummary()
     } else {
         if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -299,7 +299,7 @@ fun VideoSettingsPanel(
                             imageVector = timerIcon,
                             contentDescription = null,
                             tint = if (LocalAndroidNativeVariant.current == AndroidNativeVariant.MIUIX) {
-                                MiuixTheme.colorScheme.onSurfaceVariantActions
+                                AppSurfaceTokens.onSurfaceVariantActions()
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -1241,7 +1241,7 @@ private fun SettingsItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    tint = AppSurfaceTokens.onSurfaceVariantActions(),
                     modifier = Modifier.size(spec.iconSize)
                 )
             },
@@ -1252,7 +1252,7 @@ private fun SettingsItem(
                     Icon(
                         imageVector = chevronIcon,
                         contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        tint = AppSurfaceTokens.onSurfaceVariantActions(),
                         modifier = Modifier.size(14.dp)
                     )
                 }
@@ -1545,7 +1545,7 @@ private fun SettingsActionPill(
         onClick = onClick,
         shape = RoundedCornerShape(policy.pillHeightDp.dp),
         color = if (LocalAndroidNativeVariant.current == AndroidNativeVariant.MIUIX) {
-            MiuixTheme.colorScheme.secondaryContainer
+            AppSurfaceTokens.secondaryContainer()
         } else {
             MaterialTheme.colorScheme.secondaryContainer
         },

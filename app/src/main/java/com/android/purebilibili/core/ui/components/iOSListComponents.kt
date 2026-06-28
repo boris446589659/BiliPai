@@ -980,7 +980,7 @@ fun IOSClickableItem(
                         } else {
                             MaterialTheme.typography.bodyMedium
                         },
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        color = AppSurfaceTokens.onSurfaceVariantSummary(),
                         modifier = if (enableCopy) {
                             Modifier.copyOnLongPress(copyValue ?: value, title)
                         } else {
@@ -993,7 +993,7 @@ fun IOSClickableItem(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        tint = AppSurfaceTokens.onSurfaceVariantActions(),
                         modifier = Modifier.size(rowSpec.trailingIconSizeDp.dp)
                     )
                 }
@@ -1331,7 +1331,7 @@ private fun MiuixAdaptiveSearchBar(
     val inputTextStyle = MiuixTheme.textStyles.main
         .copy(fontWeight = FontWeight.Medium)
         .merge(MaterialTheme.typography.bodyMedium)
-        .copy(color = MiuixTheme.colorScheme.onSurface)
+        .copy(color = AppSurfaceTokens.onSurface())
 
     BasicTextField(
         value = query,
@@ -1343,7 +1343,7 @@ private fun MiuixAdaptiveSearchBar(
             .background(containerColor),
         singleLine = true,
         textStyle = inputTextStyle,
-        cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
+        cursorBrush = SolidColor(AppSurfaceTokens.primary()),
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
@@ -1357,7 +1357,7 @@ private fun MiuixAdaptiveSearchBar(
                         end = miuixAdaptiveSearchLeadingEndPadding
                     ),
                     imageVector = Icons.Default.Search,
-                    tint = MiuixTheme.colorScheme.onSurfaceContainerHigh,
+                    tint = AppSurfaceTokens.onSurfaceContainerHigh(),
                     contentDescription = null
                 )
                 Box(
@@ -1370,7 +1370,7 @@ private fun MiuixAdaptiveSearchBar(
                         Text(
                             text = placeholder,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MiuixTheme.colorScheme.onSurfaceContainerHigh
+                            color = AppSurfaceTokens.onSurfaceContainerHigh()
                         )
                     }
                     innerTextField()
@@ -1391,7 +1391,7 @@ private fun MiuixAdaptiveSearchBar(
                                     indication = null
                                 ) { onQueryChange("") },
                             imageVector = Icons.Default.Clear,
-                            tint = MiuixTheme.colorScheme.onSurfaceContainerHighest,
+                            tint = AppSurfaceTokens.onSurfaceContainerHighest(),
                             contentDescription = "Clear"
                         )
                     }

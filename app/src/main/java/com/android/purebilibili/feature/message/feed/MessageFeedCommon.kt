@@ -28,7 +28,7 @@ import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalAndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.theme.UiPreset
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.android.purebilibili.core.ui.AppSurfaceTokens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -164,7 +164,7 @@ internal fun MessageFeedCard(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(if (isMiuix) 18.dp else 20.dp),
-        color = if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        color = if (isMiuix) AppSurfaceTokens.surfaceContainer() else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
         border = if (isMiuix) {
             androidx.compose.foundation.BorderStroke(
                 0.8.dp,

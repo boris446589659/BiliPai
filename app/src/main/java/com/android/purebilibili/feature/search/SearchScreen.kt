@@ -78,6 +78,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.R
 import com.android.purebilibili.core.ui.AdaptiveScaffold
+import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.database.entity.SearchHistory
 import com.android.purebilibili.core.ui.LoadingAnimation
 import com.android.purebilibili.core.ui.LocalGlobalWallpaperBackdropVisible
@@ -132,7 +133,7 @@ import com.android.purebilibili.data.model.response.SearchPhotoItem
 import com.android.purebilibili.data.model.response.SearchType
 import com.android.purebilibili.data.model.response.SearchTopicItem
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 internal fun shouldShowSearchHotSection(
@@ -1718,10 +1719,8 @@ fun SearchTopBar(
                             shape = RoundedCornerShape(chromeSpec.inputCornerRadiusDp.dp)
                         )
                         .background(
-                            if (uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX) {
-                                MiuixTheme.colorScheme.surfaceContainerHigh
-                            } else if (uiPreset == UiPreset.MD3) {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            if (uiPreset == UiPreset.MD3) {
+                                AppSurfaceTokens.surfaceContainerHigh()
                             } else {
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                             }
@@ -1835,10 +1834,8 @@ fun HistoryChip(
     }
     Surface(
         onClick = onClick,
-        color = if (uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX) {
-            MiuixTheme.colorScheme.surfaceContainerHigh
-        } else if (uiPreset == UiPreset.MD3) {
-            MaterialTheme.colorScheme.surfaceContainerHigh
+        color = if (uiPreset == UiPreset.MD3) {
+            AppSurfaceTokens.surfaceContainerHigh()
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
         },
@@ -2572,7 +2569,7 @@ private fun SearchResultCardSurface(
     val isMiuix = uiPreset == UiPreset.MD3 && androidNativeVariant == AndroidNativeVariant.MIUIX
     val shape = RoundedCornerShape(if (isMiuix) 18.dp else 12.dp)
     val color = if (isMiuix) {
-        MiuixTheme.colorScheme.surfaceContainer
+        AppSurfaceTokens.surfaceContainer()
     } else {
         MaterialTheme.colorScheme.surface.copy(alpha = appearance.containerAlpha)
     }

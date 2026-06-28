@@ -83,37 +83,99 @@ object AppSurfaceTokens {
 
     @Composable
     @ReadOnlyComposable
-    fun onSurfaceVariantSummary(): Color {
-        val uiPreset = LocalUiPreset.current
-        val androidNativeVariant = LocalAndroidNativeVariant.current
-        return if (isNativeMiuixEnabled(uiPreset, androidNativeVariant)) {
-            MiuixTheme.colorScheme.onSurfaceVariantSummary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
-    }
+    fun onSurfaceVariantSummary(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        materialFallback = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 
     @Composable
     @ReadOnlyComposable
-    fun onSurfaceVariantActions(): Color {
-        val uiPreset = LocalUiPreset.current
-        val androidNativeVariant = LocalAndroidNativeVariant.current
-        return if (isNativeMiuixEnabled(uiPreset, androidNativeVariant)) {
-            MiuixTheme.colorScheme.onSurfaceVariantActions
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
-    }
+    fun onSurfaceVariantActions(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+        materialFallback = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 
     @Composable
     @ReadOnlyComposable
-    fun secondaryContainer(): Color {
+    fun secondaryContainer(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.secondaryContainer,
+        materialFallback = MaterialTheme.colorScheme.secondaryContainer
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun onSecondaryContainer(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.onSecondaryContainer,
+        materialFallback = MaterialTheme.colorScheme.onSecondaryContainer
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun surface(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.surface,
+        materialFallback = MaterialTheme.colorScheme.surface
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun surfaceContainer(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.surfaceContainer,
+        materialFallback = MaterialTheme.colorScheme.surfaceContainer
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun surfaceContainerHigh(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.surfaceContainerHigh,
+        materialFallback = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun onSurface(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.onSurface,
+        materialFallback = MaterialTheme.colorScheme.onSurface
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun onSurfaceContainerHigh(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.onSurfaceContainerHigh,
+        materialFallback = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun onSurfaceContainerHighest(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.onSurfaceContainerHighest,
+        materialFallback = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    @Composable
+    @ReadOnlyComposable
+    fun primary(): Color = resolveMiuixSemanticColorComposable(
+        miuixColor = MiuixTheme.colorScheme.primary,
+        materialFallback = MaterialTheme.colorScheme.primary
+    )
+
+    fun resolveMiuixSemanticColor(
+        isMiuix: Boolean,
+        miuixColor: Color,
+        materialFallback: Color
+    ): Color = if (isMiuix) miuixColor else materialFallback
+
+    @Composable
+    @ReadOnlyComposable
+    private fun resolveMiuixSemanticColorComposable(
+        miuixColor: Color,
+        materialFallback: Color
+    ): Color {
         val uiPreset = LocalUiPreset.current
         val androidNativeVariant = LocalAndroidNativeVariant.current
-        return if (isNativeMiuixEnabled(uiPreset, androidNativeVariant)) {
-            MiuixTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.secondaryContainer
-        }
+        return resolveMiuixSemanticColor(
+            isMiuix = isNativeMiuixEnabled(uiPreset, androidNativeVariant),
+            miuixColor = miuixColor,
+            materialFallback = materialFallback
+        )
     }
 }

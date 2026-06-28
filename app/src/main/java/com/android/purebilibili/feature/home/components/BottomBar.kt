@@ -181,7 +181,7 @@ import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 
 private val iosIndicatorSpecular: MiuixHighlight = MiuixHighlight(
     width = 1.dp,
@@ -1182,7 +1182,7 @@ internal fun Modifier.kernelSuMiuixFloatingDockSurface(
     materialMotionProgress: Float = 0f,
     materialPressProgress: Float = 0f
 ): Modifier = composed {
-    val isDarkTheme = resolveBottomBarDarkTheme(MiuixTheme.colorScheme.background)
+    val isDarkTheme = resolveBottomBarDarkTheme(AppSurfaceTokens.chromeBackground())
     val useHazeBlur = shouldUseAndroidNativeFloatingHazeBlur(
         glassEnabled = glassEnabled,
         blurEnabled = blurEnabled,
@@ -2717,14 +2717,14 @@ private fun MiuixBottomBar(
     )
     val tuning = resolveAndroidNativeBottomBarTuning(
         blurEnabled = glassEnabled || blurEnabled,
-        darkTheme = resolveBottomBarDarkTheme(MiuixTheme.colorScheme.background),
+        darkTheme = resolveBottomBarDarkTheme(AppSurfaceTokens.chromeBackground()),
         androidNativeVariant = AndroidNativeVariant.MIUIX
     )
     val blurIntensity = currentUnifiedBlurIntensity()
     val baseSurfaceColor = if (isFloating) {
-        MiuixTheme.colorScheme.surfaceContainer
+        AppSurfaceTokens.surfaceContainer()
     } else {
-        MiuixTheme.colorScheme.surface
+        AppSurfaceTokens.surface()
     }
     val globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
     val containerColor = if (isFloating) {
@@ -3033,7 +3033,7 @@ private fun KernelSuAlignedBottomBar(
 ) {
     val shellShape = resolveSharedBottomBarCapsuleShape()
     val tabsBackdrop = rememberMiuixLayerBackdrop()
-    val isDarkTheme = resolveBottomBarDarkTheme(MiuixTheme.colorScheme.background)
+    val isDarkTheme = resolveBottomBarDarkTheme(AppSurfaceTokens.chromeBackground())
     val ksuContainerColor = resolveKernelSuBottomBarShellColor(
         containerColor = containerColor,
         liquidGlassEnabled = glassEnabled,

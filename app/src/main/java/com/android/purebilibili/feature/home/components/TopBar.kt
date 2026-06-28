@@ -104,7 +104,7 @@ import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
 import androidx.compose.foundation.combinedClickable // [Added]
 import top.yukonga.miuix.kmp.basic.TabRowDefaults as MiuixTabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour as MiuixTabRowWithContour
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 import java.io.File
 
 private const val IOS_TOP_TAB_CONTENT_PADDING_DP = 2f
@@ -1746,15 +1746,15 @@ private fun MiuixCategoryTabRow(
     )
     val tabContentHeight = resolveMiuixTopTabContentHeight(topTabSpec.rowHeight)
     val tabRowColors = resolveMiuixTopTabRowColors(
-        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer,
-        onSurfaceVariant = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        secondaryContainer = MiuixTheme.colorScheme.secondaryContainer,
-        onSecondaryContainer = MiuixTheme.colorScheme.onSecondaryContainer
+        surfaceContainer = AppSurfaceTokens.surfaceContainer(),
+        onSurfaceVariant = AppSurfaceTokens.onSurfaceVariantSummary(),
+        secondaryContainer = AppSurfaceTokens.secondaryContainer(),
+        onSecondaryContainer = AppSurfaceTokens.onSecondaryContainer()
     )
     val actionColors = resolveMiuixTopTabActionColors(
-        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer,
+        surfaceContainer = AppSurfaceTokens.surfaceContainer(),
         outlineVariant = MaterialTheme.colorScheme.outlineVariant,
-        contentColor = MiuixTheme.colorScheme.onSurfaceVariantActions
+        contentColor = AppSurfaceTokens.onSurfaceVariantActions()
     )
 
     Row(

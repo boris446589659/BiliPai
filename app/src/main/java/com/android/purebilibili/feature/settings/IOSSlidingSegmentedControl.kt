@@ -37,7 +37,7 @@ import com.android.purebilibili.feature.home.components.BOTTOM_BAR_LIQUID_SEGMEN
 import com.android.purebilibili.feature.home.components.BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
 import com.kyant.backdrop.Backdrop
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.android.purebilibili.core.ui.AppSurfaceTokens
 
 internal fun resolveMd3SegmentedLabelFontSizeSp(
     optionCount: Int,
@@ -127,21 +127,13 @@ internal fun <T> IOSSlidingSegmentedSetting(
             } else {
                 MaterialTheme.typography.bodyLarge
             },
-            color = if (uiPreset == UiPreset.MD3) {
-                MiuixTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
+            color = AppSurfaceTokens.onSurface()
         )
         if (!subtitle.isNullOrBlank()) {
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (uiPreset == UiPreset.MD3) {
-                    MiuixTheme.colorScheme.onSurfaceVariantSummary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                color = AppSurfaceTokens.onSurfaceVariantSummary()
             )
         }
         IOSSlidingSegmentedControl(
@@ -219,17 +211,16 @@ private fun <T> Md3SegmentedControl(
     }
     val androidNativeVariant = LocalAndroidNativeVariant.current
     val materialColorScheme = MaterialTheme.colorScheme
-    val miuixColorScheme = MiuixTheme.colorScheme
     val colorTokens = resolveMd3SegmentedControlColorTokens(
         androidNativeVariant = androidNativeVariant,
         materialPrimaryContainer = materialColorScheme.primaryContainer,
         materialOnPrimaryContainer = materialColorScheme.onPrimaryContainer,
         materialSurfaceContainerHigh = materialColorScheme.surfaceContainerHigh,
         materialOnSurfaceVariant = materialColorScheme.onSurfaceVariant,
-        miuixSecondaryContainer = miuixColorScheme.secondaryContainer,
-        miuixOnSecondaryContainer = miuixColorScheme.onSecondaryContainer,
-        miuixSurfaceContainerHigh = miuixColorScheme.surfaceContainerHigh,
-        miuixOnSurfaceVariantSummary = miuixColorScheme.onSurfaceVariantSummary
+        miuixSecondaryContainer = AppSurfaceTokens.secondaryContainer(),
+        miuixOnSecondaryContainer = AppSurfaceTokens.onSecondaryContainer(),
+        miuixSurfaceContainerHigh = AppSurfaceTokens.surfaceContainerHigh(),
+        miuixOnSurfaceVariantSummary = AppSurfaceTokens.onSurfaceVariantSummary()
     )
     val labelFontSize = remember(options.size, longestLabelLength) {
         resolveMd3SegmentedLabelFontSizeSp(

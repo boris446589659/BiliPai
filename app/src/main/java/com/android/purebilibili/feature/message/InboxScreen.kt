@@ -34,7 +34,7 @@ import coil.compose.AsyncImage
 import com.android.purebilibili.core.ui.ComfortablePullToRefreshBox
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.data.model.response.SessionItem
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.android.purebilibili.core.ui.AppSurfaceTokens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -349,7 +349,7 @@ private fun MessageCenterShortcutCard(
             .height(if (isMiuix) 88.dp else 96.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(if (isMiuix) 18.dp else 20.dp),
-        color = if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        color = if (isMiuix) AppSurfaceTokens.surfaceContainer() else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         border = if (isMiuix) {
             androidx.compose.foundation.BorderStroke(
                 0.8.dp,
@@ -538,8 +538,8 @@ fun SessionListItem(
             .padding(horizontal = if (isMiuix) 12.dp else 0.dp, vertical = if (isMiuix) 3.dp else 0.dp),
         shape = RoundedCornerShape(if (isMiuix) 16.dp else 0.dp),
         color = when {
-            isMiuix && session.top_ts > 0 -> MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
-            isMiuix -> MiuixTheme.colorScheme.surfaceContainer
+            isMiuix && session.top_ts > 0 -> AppSurfaceTokens.secondaryContainer().copy(alpha = 0.55f)
+            isMiuix -> AppSurfaceTokens.surfaceContainer()
             session.top_ts > 0 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             else -> Color.Transparent
         }

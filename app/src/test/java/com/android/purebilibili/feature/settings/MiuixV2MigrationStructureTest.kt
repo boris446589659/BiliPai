@@ -51,6 +51,48 @@ class MiuixV2MigrationStructureTest {
         assertTrue(source.contains("val miuixVersion = \"0.9.2\""))
     }
 
+    @Test
+    fun featureLayer_avoidsDirectMiuixThemeColorSchemeReads() {
+        val allowed = setOf(
+            "app/src/main/java/com/android/purebilibili/core/theme/Theme.kt",
+            "app/src/main/java/com/android/purebilibili/core/ui/AppSurfaceTokens.kt",
+            "app/src/main/java/com/android/purebilibili/core/ui/components/iOSListComponents.kt",
+            "app/src/main/java/com/android/purebilibili/feature/dynamic/components/DynamicCard.kt"
+        )
+        val offenders = listOf(
+            "app/src/main/java/com/android/purebilibili/feature/search/SearchScreen.kt",
+            "app/src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt",
+            "app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt",
+            "app/src/main/java/com/android/purebilibili/feature/message/InboxScreen.kt",
+            "app/src/main/java/com/android/purebilibili/feature/message/feed/MessageFeedCommon.kt",
+            "app/src/main/java/com/android/purebilibili/feature/video/ui/components/VideoSettingsPanel.kt",
+            "app/src/main/java/com/android/purebilibili/feature/settings/IOSSlidingSegmentedControl.kt"
+        ).filter { path ->
+            loadSource(path).contains("MiuixTheme.colorScheme")
+        }
+        assertTrue(
+            offenders.isEmpty(),
+            "Direct MiuixTheme.colorScheme reads should route through AppSurfaceTokens:\n" +
+                offenders.joinToString("\n")
+        )
+    }
+
+    @Test
+    fun appSurfaceTokens_exposesFullMiuixSemanticPalette() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/ui/AppSurfaceTokens.kt")
+        listOf(
+            "fun surfaceContainer()",
+            "fun surfaceContainerHigh()",
+            "fun onSecondaryContainer()",
+            "fun onSurfaceContainerHigh()",
+            "fun onSurfaceContainerHighest()",
+            "fun primary()",
+            "fun resolveMiuixSemanticColor("
+        ).forEach { token ->
+            assertTrue(source.contains(token), "Missing token: $token")
+        }
+    }
+
     private fun loadSource(path: String): String {
         val normalizedPath = path.removePrefix("app/")
         val sourceFile = listOf(
