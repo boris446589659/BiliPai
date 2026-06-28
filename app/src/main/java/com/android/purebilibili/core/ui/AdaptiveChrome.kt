@@ -32,6 +32,7 @@ import com.android.purebilibili.core.theme.resolveAndroidNativeChromeTokens
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar as MiuixSmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
+import top.yukonga.miuix.kmp.utils.MiuixPopupUtils
 
 fun isNativeMiuixEnabled(
     uiPreset: UiPreset,
@@ -178,18 +179,25 @@ fun AdaptiveScaffold(
         defaultBackgroundColor = MaterialTheme.colorScheme.background,
         globalWallpaperVisible = LocalGlobalWallpaperBackdropVisible.current
     )
-    if (rememberIsNativeMiuixEnabled()) {
+    val scaffoldRenderer = resolveAdaptiveScaffoldRenderer(
+        uiPreset = LocalUiPreset.current,
+        androidNativeVariant = LocalAndroidNativeVariant.current
+    )
+    when (scaffoldRenderer) {
+        AdaptiveScaffoldRenderer.MIUIX_SCAFFOLD_WITH_POPUP_HOST -> {
         MiuixScaffold(
             modifier = modifier,
             topBar = topBar,
             bottomBar = bottomBar,
             floatingActionButton = floatingActionButton,
             snackbarHost = snackbarHost,
+            popupHost = { MiuixPopupUtils.MiuixPopupHost() },
             containerColor = effectiveContainerColor,
             contentWindowInsets = contentWindowInsets,
             content = content
         )
-    } else {
+        }
+        AdaptiveScaffoldRenderer.MATERIAL3_SCAFFOLD -> {
         Scaffold(
             modifier = modifier,
             topBar = topBar,
@@ -200,6 +208,7 @@ fun AdaptiveScaffold(
             contentWindowInsets = contentWindowInsets,
             content = content
         )
+        }
     }
 }
 

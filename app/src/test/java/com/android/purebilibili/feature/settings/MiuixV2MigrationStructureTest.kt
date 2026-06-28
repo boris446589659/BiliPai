@@ -159,6 +159,44 @@ class MiuixV2MigrationStructureTest {
     }
 
     @Test
+    fun adaptiveScaffold_miuixPathMountsPopupHostForOverlayDialogs() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/ui/AdaptiveChrome.kt")
+        assertTrue(source.contains("resolveAdaptiveScaffoldRenderer("))
+        assertTrue(source.contains("MiuixPopupUtils.MiuixPopupHost()"))
+        assertTrue(source.contains("popupHost ="))
+    }
+
+    @Test
+    fun adaptiveScaffoldPolicy_requiresMiuixPopupHostOnMiuixVariant() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/ui/AdaptiveScaffoldPolicy.kt")
+        assertTrue(source.contains("shouldMountMiuixPopupHostOnAdaptiveScaffold("))
+        assertTrue(source.contains("MIUIX_SCAFFOLD_WITH_POPUP_HOST"))
+    }
+
+    @Test
+    fun featureLayer_doesNotCallIosLargeTitleBarDirectly() {
+        val featureRoot = File("app/src/main/java/com/android/purebilibili/feature")
+        val offenders = featureRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .filter { it.readText().contains("iOSLargeTitleBar(") }
+            .map { it.path }
+            .toList()
+        assertTrue(
+            offenders.isEmpty(),
+            "iOSLargeTitleBar should remain iOS-only chrome; migrate feature screens to AdaptiveScaffold:\n" +
+                offenders.joinToString("\n")
+        )
+    }
+
+    @Test
+    fun iosLargeTitleBar_routesMd3AndMiuixToAdaptiveTopAppBar() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/core/ui/iOSLargeTitleBar.kt")
+        assertTrue(source.contains("resolveLargeTitleBarRenderer("))
+        assertTrue(source.contains("IOSLargeTitleBarRenderer.ADAPTIVE_TOP_APP_BAR"))
+        assertTrue(source.contains("AdaptiveTopAppBar("))
+    }
+
+    @Test
     fun md3SegmentedControl_usesAdaptiveSquircleBackground() {
         val source = loadSource(
             "app/src/main/java/com/android/purebilibili/feature/settings/IOSSlidingSegmentedControl.kt"
