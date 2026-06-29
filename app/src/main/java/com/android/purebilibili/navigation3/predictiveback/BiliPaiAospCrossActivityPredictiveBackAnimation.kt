@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
@@ -34,12 +35,11 @@ import androidx.navigationevent.NavigationEventTransitionState.InProgress
 import com.android.purebilibili.core.ui.util.rememberDeviceCornerRadius
 import com.android.purebilibili.navigation3.BiliPaiNavKey
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
     private val exitDirection: BiliPaiPredictiveBackExitDirection = BiliPaiPredictiveBackExitDirection.FOLLOW_GESTURE,
 ) : BiliPaiPredictiveBackAnimationHandler {
-    private var exitingPageKey: String? = null
+    private val exitingPageKey = mutableStateOf<String?>(null)
     private val exitAnimatable = Animatable(0f)
     private var inPredictiveBackAnimation = false
 
@@ -47,9 +47,11 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
         transitionState: NavigationEventTransitionState?,
         currentPageKey: BiliPaiNavKey?,
     ) {
-        val isInterruptingEnter = transitionState is InProgress && !inPredictiveBackAnimation
-        if (!isInterruptingEnter) {
-            exitingPageKey = currentPageKey.toString()
+        exitingPageKey.value = currentPageKey.toString()
+        if (transitionState is InProgress && !inPredictiveBackAnimation) {
+            // 中断进入：只设置 exitingPageKey 阻止 decorator 早期返回，
+            // 让下一帧直接应用 dragScale，避免从 scale=1 跳跃到 dragScale。
+        } else {
             exitAnimatable.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = 150, easing = LinearEasing),
@@ -58,11 +60,8 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
     }
 
     override fun onPagePop(contentPageKey: Any, animationScope: CoroutineScope) {
-        if (exitingPageKey == contentPageKey) {
-            exitingPageKey = null
-            animationScope.launch {
-                exitAnimatable.snapTo(0f)
-            }
+        if (exitingPageKey.value == contentPageKey) {
+            exitingPageKey.value = null
         }
     }
 
@@ -100,6 +99,12 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
             // 同 BiliPaiScalePredictiveBackAnimation：把 inPredictiveBackAnimation 写入推迟到
             // SideEffect，避免 PostExit 每帧在 composition body 里 back-write
             // snapshot state 触发本帧下游整片失效（与 PostExit 抖动卡顿直接相关）。
+            //
+            // 注意：SideEffect 在 Composition 完成之后写入，
+            // 因此 inPredictiveBackAnimation 始终滞后一个帧。
+            // onBackPressed 的 guard 在读到此标志前一定会错过极快手势的第一帧。
+            // 这是有意为之：在 composition body 内直接写入标志
+            // 会导致 PostExit 每帧下游整片失效，造成卡顿。
             val predictiveNow = animatedScale != 1f
             SideEffect {
                 inPredictiveBackAnimation = predictiveNow
@@ -113,8 +118,8 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
             BiliPaiPredictiveBackExitDirection.ALWAYS_LEFT -> -1f
         }
 
-        val isExitingPage = exitingPageKey != null && exitingPageKey == pageKey
-        val isCurrentNavTarget = exitingPageKey == null && pageKey == currentPageKey.toString()
+        val isExitingPage = exitingPageKey.value != null && exitingPageKey.value == pageKey
+        val isCurrentNavTarget = exitingPageKey.value == null && pageKey == currentPageKey.toString()
         val maxScale = 0.85f
         val dragScale = 1f - (1f - maxScale) * gestureProgress
         val currentPivotY = if (touchY != null && containerHeightPx > 0) {
@@ -124,12 +129,12 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
         }
         val currentPivotX = if (edge == EDGE_LEFT) 0.8f else 0.2f
         val isGestureActive = transitionState is InProgress && inPredictiveBackAnimation
-        val isExitAnimationRunning = exitingPageKey != null
+        val isExitAnimationRunning = exitingPageKey.value != null
         val needsClip = isGestureActive || isExitAnimationRunning
 
         this
             .graphicsLayer {
-                if (transitionState is InProgress && !inPredictiveBackAnimation && exitingPageKey == null) {
+                if (transitionState is InProgress && !inPredictiveBackAnimation && exitingPageKey.value == null) {
                     return@graphicsLayer
                 }
                 if (transitionState is InProgress) {
@@ -139,11 +144,7 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
                     isExitingPage -> {
                         val computedScaleX = dragScale + (maxScale - dragScale) * emphasizedProgress
                         val computedTranslationX = enteringStartOffsetPx * directionMultiplier * emphasizedProgress
-                        val computedAlpha = if (linearProgress >= 0.2f) {
-                            0f
-                        } else {
-                            (1f - linearProgress * 5f).coerceAtLeast(0f)
-                        }
+                        val computedAlpha = (1f - linearProgress).coerceIn(0f, 1f)
                         scaleX = computedScaleX
                         scaleY = computedScaleX
                         translationX = computedTranslationX
@@ -157,7 +158,7 @@ internal class BiliPaiAospCrossActivityPredictiveBackAnimation(
                     }
                     else -> {
                         val initialTranslationX = -enteringStartOffsetPx * directionMultiplier
-                        if (exitingPageKey != null) {
+                        if (exitingPageKey.value != null) {
                             scaleX = dragScale + (1f - dragScale) * emphasizedProgress
                             scaleY = dragScale + (1f - dragScale) * emphasizedProgress
                             translationX = initialTranslationX * (1f - emphasizedProgress)
