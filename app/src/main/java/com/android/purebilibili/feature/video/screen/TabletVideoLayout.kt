@@ -46,6 +46,8 @@ import com.android.purebilibili.feature.video.viewmodel.CommentUiState
 import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
 import com.android.purebilibili.feature.video.viewmodel.PlayerViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoCommentViewModel
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
@@ -547,10 +549,13 @@ private fun TabletSecondaryContent(
                             onAvatarClick = { mid -> mid.toLongOrNull()?.let(onUpClick) ?: Unit }
                         )
                     } else {
+                        val commentChromeBackdrop = rememberLayerBackdrop()
                         Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .layerBackdrop(commentChromeBackdrop),
                             contentPadding = PaddingValues(8.dp)
                         ) {
                             item {
@@ -563,7 +568,8 @@ private fun TabletSecondaryContent(
                                             com.android.purebilibili.core.store.SettingsManager
                                                 .setCommentDefaultSortMode(context, mode.apiMode)
                                         }
-                                    }
+                                    },
+                                    backdrop = commentChromeBackdrop
                                 )
                             }
                             item {

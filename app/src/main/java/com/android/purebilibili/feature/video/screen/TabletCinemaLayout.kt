@@ -90,6 +90,8 @@ import coil.compose.AsyncImage
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.store.SettingsManager
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.android.purebilibili.core.store.TabletCommentPanelWidthPreset
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
@@ -1171,10 +1173,13 @@ private fun CinemaCommentsPane(
             onAvatarClick = { mid -> mid.toLongOrNull()?.let(onUpClick) ?: Unit }
         )
     } else {
+        val commentChromeBackdrop = rememberLayerBackdrop()
         Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(commentChromeBackdrop),
             contentPadding = PaddingValues(bottom = 74.dp)
         ) {
             item {
@@ -1188,7 +1193,8 @@ private fun CinemaCommentsPane(
                         }
                     },
                     upOnly = commentState.upOnlyFilter,
-                    onUpOnlyToggle = { commentViewModel.toggleUpOnly() }
+                    onUpOnlyToggle = { commentViewModel.toggleUpOnly() },
+                    backdrop = commentChromeBackdrop
                 )
             }
             item {

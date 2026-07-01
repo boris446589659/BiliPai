@@ -92,6 +92,21 @@ class VideoContentTabBarPolicyTest {
     }
 
     @Test
+    fun `video content section wires chrome backdrop into tab and comment segmented controls`() {
+        val source = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/video/screen/VideoContentSection.kt"
+        )
+
+        assertTrue(source.contains("val videoContentChromeBackdrop = rememberLayerBackdrop()"))
+        assertTrue(source.contains(".layerBackdrop(videoContentChromeBackdrop)"))
+        assertTrue(source.contains("backdrop = videoContentChromeBackdrop"))
+        assertTrue(source.contains("chromeBackdrop = videoContentChromeBackdrop"))
+        assertTrue(source.contains("backdrop = chromeBackdrop"))
+        assertTrue(source.contains("forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled"))
+        assertTrue(source.contains("liquidGlassEffectsEnabled = backdrop != null"))
+    }
+
+    @Test
     fun `ios preset uses calmer intro comment tab switch motion`() {
         val iosSpec = resolveVideoContentTabSwitchAnimationSpec(UiPreset.IOS)
         val md3Spec = resolveVideoContentTabSwitchAnimationSpec(UiPreset.MD3)

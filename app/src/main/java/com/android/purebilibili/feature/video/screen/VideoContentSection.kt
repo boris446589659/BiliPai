@@ -55,7 +55,11 @@ import com.android.purebilibili.core.ui.resolveCompactCapsuleChromeSpec
 import com.android.purebilibili.core.ui.performance.TrackJankStateFlag
 import com.android.purebilibili.core.ui.performance.TrackScrollJank
 import com.android.purebilibili.core.store.DanmakuSettings
+import com.android.purebilibili.core.store.HomeSettings
 import com.android.purebilibili.core.store.SettingsManager
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.theme.UiPreset
@@ -372,16 +376,29 @@ fun VideoContentSection(
         scrollableState = commentListState,
         stateName = "video_detail:comment_scroll"
     )
-    val videoDetailMotionBudget = resolveVideoDetailMotionBudget(
-        isTabSwitching = pagerState.isScrollInProgress,
-        isContentScrolling = introListState.isScrollInProgress || commentListState.isScrollInProgress
-    )
+    val isIntroListScrolling by remember {
+        derivedStateOf { introListState.isScrollInProgress }
+    }
+    val isCommentListScrolling by remember {
+        derivedStateOf { commentListState.isScrollInProgress }
+    }
+    val videoDetailMotionBudget by remember {
+        derivedStateOf {
+            resolveVideoDetailMotionBudget(
+                isTabSwitching = pagerState.isScrollInProgress,
+                isContentScrolling = isIntroListScrolling || isCommentListScrolling
+            )
+        }
+    }
     val animateVideoDetailLayout = shouldAnimateVideoDetailLayout(videoDetailMotionBudget)
-    val lightweightCommentRendering = remember(pagerState.currentPage, isVideoPlaying) {
-        shouldUseLightweightCommentRendering(
-            selectedTabIndex = pagerState.currentPage,
-            isVideoPlaying = isVideoPlaying
-        )
+    val lightweightCommentRendering by remember {
+        derivedStateOf {
+            shouldUseLightweightCommentRendering(
+                selectedTabIndex = pagerState.currentPage,
+                isVideoPlaying = isVideoPlaying,
+                isCommentListScrolling = isCommentListScrolling
+            )
+        }
     }
     
     // 评论图片预览状态
@@ -457,6 +474,7 @@ fun VideoContentSection(
             }
     }
 
+    val videoContentChromeBackdrop = rememberLayerBackdrop()
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -474,18 +492,21 @@ fun VideoContentSection(
                 onDanmakuSettingsClick = { showDanmakuSettings = true },
                 modifier = Modifier,
                 isPlayerCollapsed = isPlayerCollapsed,
-                onRestorePlayer = onRestorePlayer
+                onRestorePlayer = onRestorePlayer,
+                backdrop = videoContentChromeBackdrop
             )
 
             HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = resolveVideoDetailBeyondViewportPageCount(
-                    isVideoPlaying = isVideoPlaying
+                    isVideoPlaying = isVideoPlaying,
+                    selectedTabIndex = pagerState.currentPage
                 ),
                 userScrollEnabled = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .layerBackdrop(videoContentChromeBackdrop)
             ) { page ->
                 when (page) {
                     0 -> VideoIntroTab(
@@ -582,7 +603,8 @@ fun VideoContentSection(
                         onReportComment = onReportComment,
                         onToggleTopComment = onToggleTopComment,
                         showIdentityDecorations = showIdentityDecorations,
-                        lightweightCommentRendering = lightweightCommentRendering
+                        lightweightCommentRendering = lightweightCommentRendering,
+                        chromeBackdrop = videoContentChromeBackdrop
                     )
                 }
             }
@@ -853,7 +875,8 @@ private fun VideoCommentTab(
     onReportComment: (Long, Int) -> Unit,
     onToggleTopComment: (ReplyItem) -> Unit,
     showIdentityDecorations: Boolean,
-    lightweightCommentRendering: Boolean
+    lightweightCommentRendering: Boolean,
+    chromeBackdrop: Backdrop? = null
 ) {
     val commentAppearance = rememberVideoCommentAppearance()
     val scope = rememberCoroutineScope()
@@ -863,6 +886,27 @@ private fun VideoCommentTab(
                 firstVisibleItemIndex = listState.firstVisibleItemIndex,
                 firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset
             )
+        }
+    }
+    val shouldLoadMore by remember(
+        listState,
+        replies.size,
+        replyCount,
+        isRepliesLoading,
+        isRepliesEnd
+    ) {
+        derivedStateOf {
+            shouldLoadMoreVideoComments(
+                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
+                totalItemsCount = listState.layoutInfo.totalItemsCount,
+                isLoading = isRepliesLoading,
+                isEnd = isRepliesEnd || replies.isEmpty() || replyCount <= 0 || replies.size >= replyCount
+            )
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            onLoadMoreReplies()
         }
     }
     Box(
@@ -879,7 +923,8 @@ private fun VideoCommentTab(
                     sortMode = sortMode,
                     onSortModeChange = onSortModeChange,
                     upOnly = upOnlyFilter,
-                    onUpOnlyToggle = onUpOnlyToggle
+                    onUpOnlyToggle = onUpOnlyToggle,
+                    backdrop = chromeBackdrop
                 )
             }
             if (isRepliesLoading && replies.isEmpty()) {
@@ -951,29 +996,6 @@ private fun VideoCommentTab(
 
                 // 加载更多
                 item {
-                    val shouldLoadMore by remember(
-                        listState,
-                        replies.size,
-                        replyCount,
-                        isRepliesLoading,
-                        isRepliesEnd
-                    ) {
-                        derivedStateOf {
-                            shouldLoadMoreVideoComments(
-                                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
-                                totalItemsCount = listState.layoutInfo.totalItemsCount,
-                                isLoading = isRepliesLoading,
-                                isEnd = isRepliesEnd || replies.isEmpty() || replyCount <= 0 || replies.size >= replyCount
-                            )
-                        }
-                    }
-
-                    LaunchedEffect(shouldLoadMore) {
-                        if (shouldLoadMore) {
-                            onLoadMoreReplies()
-                        }
-                    }
-
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         contentAlignment = Alignment.Center
@@ -1324,8 +1346,13 @@ private fun VideoContentTabBar(
     onDanmakuSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     isPlayerCollapsed: Boolean = false,
-    onRestorePlayer: () -> Unit = {}
+    onRestorePlayer: () -> Unit = {},
+    backdrop: Backdrop? = null
 ) {
+    val context = LocalContext.current
+    val homeSettings by SettingsManager
+        .getHomeSettings(context)
+        .collectAsStateWithLifecycle(initialValue = HomeSettings())
     val configuration = LocalConfiguration.current
     val layoutSpec = remember(configuration.screenWidthDp) {
         resolveVideoContentTabBarLayoutSpec(widthDp = configuration.screenWidthDp)
@@ -1353,6 +1380,9 @@ private fun VideoContentTabBar(
                 height = layoutSpec.segmentedControlHeightDp.dp,
                 indicatorHeight = layoutSpec.segmentedControlIndicatorHeightDp.dp,
                 labelFontSize = layoutSpec.unselectedTabFontSizeSp.sp,
+                backdrop = backdrop,
+                forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled,
+                liquidGlassEffectsEnabled = backdrop != null,
                 tapPressRefractionEnabled = false
             )
 

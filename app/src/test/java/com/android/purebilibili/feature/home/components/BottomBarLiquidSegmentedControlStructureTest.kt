@@ -301,9 +301,23 @@ class BottomBarLiquidSegmentedControlStructureTest {
         val dynamicTopBar = loadSource("app/src/main/java/com/android/purebilibili/feature/dynamic/components/DynamicTopBar.kt")
         val iosSegmented = loadSource("app/src/main/java/com/android/purebilibili/feature/settings/IOSSlidingSegmentedControl.kt")
 
+        val videoContent = loadSource("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoContentSection.kt")
+        val commentSortBar = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/video/ui/components/CommentSortFilterBar.kt"
+        )
+        val commentSheetHost = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/video/ui/components/VideoCommentSheetHost.kt"
+        )
+
         assertTrue(commonList.contains("val commonListChromeBackdrop = rememberLayerBackdrop()"))
         assertTrue(commonList.contains(".layerBackdrop(commonListChromeBackdrop)"))
         assertTrue(commonList.contains("backdrop = commonListChromeBackdrop"))
+        assertTrue(videoContent.contains("val videoContentChromeBackdrop = rememberLayerBackdrop()"))
+        assertTrue(videoContent.contains(".layerBackdrop(videoContentChromeBackdrop)"))
+        assertTrue(videoContent.contains("backdrop = videoContentChromeBackdrop"))
+        assertTrue(commentSortBar.contains("backdrop = backdrop"))
+        assertTrue(commentSheetHost.contains("val commentChromeBackdrop = rememberLayerBackdrop()"))
+        assertTrue(commentSheetHost.contains(".layerBackdrop(commentChromeBackdrop)"))
         assertTrue(dynamicScreen.contains("val dynamicChromeBackdrop = rememberLayerBackdrop()"))
         assertTrue(dynamicScreen.contains(".layerBackdrop(dynamicChromeBackdrop)"))
         assertTrue(dynamicScreen.contains("backdrop = dynamicChromeBackdrop"))

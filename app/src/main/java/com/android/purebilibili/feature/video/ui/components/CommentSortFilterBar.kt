@@ -18,8 +18,13 @@ import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.UiPreset
 import com.android.purebilibili.core.ui.resolveCompactCapsuleChromeSpec
 import com.android.purebilibili.core.util.FormatUtils
+import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
 import com.android.purebilibili.feature.video.viewmodel.CommentSortMode
+import com.kyant.backdrop.Backdrop
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.filled.Person
 
@@ -58,7 +63,8 @@ fun CommentSortFilterBar(
     onSortModeChange: (CommentSortMode) -> Unit,
     upOnly: Boolean = false,
     onUpOnlyToggle: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backdrop: Backdrop? = null
 ) {
     val sortModes = remember { CommentSortMode.entries.toList() }
     val appearance = rememberVideoCommentAppearance()
@@ -107,7 +113,8 @@ fun CommentSortFilterBar(
                 selectedIndex = sortModes.indexOf(sortMode).coerceAtLeast(0),
                 onScaleChange = { index ->
                     sortModes.getOrNull(index)?.let(onSortModeChange)
-                }
+                },
+                backdrop = backdrop
             )
         }
     }
@@ -120,8 +127,13 @@ fun CommentSortFilterBar(
 fun iOSSegmentedControl(
     items: List<String>,
     selectedIndex: Int,
-    onScaleChange: (Int) -> Unit
+    onScaleChange: (Int) -> Unit,
+    backdrop: Backdrop? = null
 ) {
+    val context = LocalContext.current
+    val homeSettings by SettingsManager
+        .getHomeSettings(context)
+        .collectAsStateWithLifecycle(initialValue = HomeSettings())
     val spec = remember(items.size) {
         resolveCommentSortSegmentedControlSpec(itemCount = items.size)
     }
@@ -133,6 +145,9 @@ fun iOSSegmentedControl(
         height = spec.heightDp.dp,
         indicatorHeight = spec.indicatorHeightDp.dp,
         labelFontSize = 13.sp,
+        backdrop = backdrop,
+        forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled,
+        liquidGlassEffectsEnabled = backdrop != null,
         tapPressRefractionEnabled = false
     )
 }

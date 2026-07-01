@@ -33,6 +33,18 @@ class CommentSortFilterBarPolicyTest {
         assertFalse(source.contains("tapPressRefractionEnabled = true"))
     }
 
+    @Test
+    fun `sort segmented control passes page backdrop into bottom bar renderer`() {
+        val source = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/video/ui/components/CommentSortFilterBar.kt"
+        )
+
+        assertTrue(source.contains("backdrop: Backdrop? = null"))
+        assertTrue(source.contains("backdrop = backdrop"))
+        assertTrue(source.contains("forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled"))
+        assertTrue(source.contains("liquidGlassEffectsEnabled = backdrop != null"))
+    }
+
     private fun loadSource(path: String): String {
         val normalizedPath = path.removePrefix("app/")
         val sourceFile = listOf(

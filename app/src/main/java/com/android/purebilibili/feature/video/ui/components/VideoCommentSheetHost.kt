@@ -46,6 +46,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.store.SettingsManager
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -759,6 +762,7 @@ internal fun VideoCommentMainList(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val appearance = rememberVideoCommentAppearance()
+    val commentChromeBackdrop = rememberLayerBackdrop()
     val listState = rememberLazyListState()
     val shouldShowBackToTop by remember(listState) {
         androidx.compose.runtime.derivedStateOf {
@@ -776,12 +780,12 @@ internal fun VideoCommentMainList(
             onSortModeChange = { mode ->
                 viewModel.setSortMode(mode)
                 scope.launch {
-                    com.android.purebilibili.core.store.SettingsManager
-                        .setCommentDefaultSortMode(context, mode.apiMode)
+                    SettingsManager.setCommentDefaultSortMode(context, mode.apiMode)
                 }
             },
             upOnly = state.upOnlyFilter,
-            onUpOnlyToggle = { viewModel.toggleUpOnly() }
+            onUpOnlyToggle = { viewModel.toggleUpOnly() },
+            backdrop = commentChromeBackdrop
         )
 
         CommentFraudDetectingBanner(isDetecting = state.isDetectingFraud)
@@ -794,7 +798,9 @@ internal fun VideoCommentMainList(
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(commentChromeBackdrop),
                     contentPadding = WindowInsets.navigationBars.asPaddingValues()
                 ) {
                     item {
