@@ -402,7 +402,7 @@ internal class NativeVideoCardTransitionController(
     }
 
     companion object {
-        private const val OPEN_NAVIGATION_HANDOFF_DELAY_MS = 240L
+        private const val OPEN_NAVIGATION_HANDOFF_DELAY_MS = 64L
         private const val MIN_TRANSITION_DURATION_MILLIS = 80L
     }
 }

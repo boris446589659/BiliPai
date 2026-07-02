@@ -32,6 +32,13 @@ class NativeVideoCardTransitionControllerStructureTest {
         assertTrue(source.contains("startProgress = previewCloseProgress"))
     }
 
+    @Test
+    fun openNavigationHandoffDoesNotFreezeAtFullBlur() {
+        val source = loadSource()
+
+        assertTrue(source.contains("private const val OPEN_NAVIGATION_HANDOFF_DELAY_MS = 64L"))
+    }
+
     private fun loadSource(): String {
         return listOf(
             File("app/src/main/java/com/android/purebilibili/core/ui/transition/native/NativeVideoCardTransitionController.kt"),

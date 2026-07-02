@@ -29,9 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.MaterialTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.feature.article.ArticleDetailScreen
@@ -507,6 +508,9 @@ fun AppNavigation(
         // 由所有入口共用的底栏内部显隐状态。进视频前先置为隐藏，避免返回到主入口后再补一次隐藏动画。
         var isBottomBarVisible by remember(launchToPortraitFeedOnStartupAtInit) {
             mutableStateOf(!launchToPortraitFeedOnStartupAtInit)
+        }
+        var nativeVideoBackPreviewVideoKey by remember {
+            mutableStateOf<String?>(null)
         }
 
         // [修复] 平板模式下(宽度>=600dp)，进入设置页(Settings.route)时隐藏底栏
@@ -1255,6 +1259,7 @@ fun AppNavigation(
             ) {
                 markNavigation3VideoReturnBeforeBackAction(targetKey = targetKey)
                 val commitPop = {
+                    nativeVideoBackPreviewVideoKey = null
                     prepareVideoPlaybackForNavigationExit(videoKey)
                     popAction()
                 }
@@ -1279,10 +1284,13 @@ fun AppNavigation(
                 val videoKey = currentKey as? BiliPaiNavKey.VideoDetail ?: return
                 val controller = nativeVideoCardTransitionController ?: return
                 val closeRequest = resolveNativeVideoCloseRequest(videoKey) ?: return
-                controller.previewClose(
+                val previewStarted = controller.previewClose(
                     request = closeRequest,
                     progress = progress
                 )
+                if (previewStarted) {
+                    nativeVideoBackPreviewVideoKey = videoKey.bvid
+                }
             }
 
             val performSystemBackAction = {
@@ -1774,97 +1782,105 @@ fun AppNavigation(
                                 }
                             }
 
-                            VideoDetailScreen(
-                                bvid = videoKey.bvid,
-                                coverUrl = videoKey.coverUrl,
-                                cid = videoKey.cid,
-                                onUpClick = { mid -> pushNavigation3Route(ScreenRoutes.Space.createRoute(mid)) },
-                                miniPlayerManager = miniPlayerManager,
-                                isInPipMode = isInPipMode,
-                                isVisible = true,
-                                startInFullscreen = videoKey.fullscreen,
-                                startAudioFromRoute = videoKey.startAudio,
-                                autoEnterPortraitFromRoute = videoKey.autoPortrait,
-                                initialVerticalFromRoute = videoKey.initialVertical,
-                                resumePositionMsFromRoute = videoKey.resumePositionMs,
-                                openCommentRootRpidFromRoute = videoKey.commentRootRpid,
-                                openCommentTargetRpidFromRoute = videoKey.commentTargetRpid,
-                                sourceRouteForSharedElement = videoKey.sourceRoute,
-                                isReturningFromDetail = navigation3ReturnSession.isReturningFromDetail,
-                                isQuickReturningFromDetail = navigation3ReturnSession.isQuickReturnFromDetail,
-                                onMarkReturningFromDetail = {
-                                    markVideoReturnSession()
-                                },
-                                onClearReturningFromDetail = {
-                                    navigation3ReturnSession = navigation3ReturnSession.clearReturning()
-                                },
-                                transitionEnabled = shouldEnableVideoDetailSharedTransition(
-                                    cardTransitionEnabled = cardTransitionEnabled
-                                ) && !shouldUseNativeVideoCardTransition(videoKey),
-                                transitionEnterDurationMillis = navMotionSpec.slowFadeDurationMillis,
-                                onBack = {
-                                    popVideoDetailWithNativeTransition(
-                                        videoKey = videoKey,
-                                        targetKey = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
-                                    ) {
-                                        navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)
-                                    }
-                                },
-                                onHomeClick = {
-                                    popVideoDetailWithNativeTransition(
-                                        videoKey = videoKey,
-                                        targetKey = BiliPaiNavKey.MainHost
-                                    ) {
-                                        // 先把 bottom pager 静默切到 HOME（被详情页遮挡，切换不可见），
-                                        // 再 pop 至 MainHost 触发与系统返回相同的横向过渡。
-                                        val homeIndex = visibleBottomBarItems.indexOf(BottomNavItem.HOME)
-                                        if (homeIndex >= 0) {
-                                            mainBottomPagerState.snapToPage(homeIndex)
-                                        }
-                                        navigation3BackStack = popBiliPaiNavKeyToRoot(navigation3BackStack)
-                                    }
-                                },
-                                onNavigateToAudioMode = {
-                                    isNavigatingToAudioMode = true
-                                    pushNavigation3Key(
-                                        BiliPaiNavKey.AudioMode(
-                                            sourceBvid = videoKey.bvid,
-                                            sourceCid = videoKey.cid,
-                                            sourceResumePositionMs = videoKey.resumePositionMs
-                                        )
-                                    )
-                                },
-                                onNavigateToSearch = { pushNavigation3Key(BiliPaiNavKey.Search) },
-                                onSearchKeywordClick = submitSearchKeywordInNavigation3,
-                                onOpenBilibiliLink = ::openBilibiliLinkInNavigation3,
-                                onVideoClick = { vid, options ->
-                                    val targetCid = options?.getLong(
-                                        com.android.purebilibili.feature.video.screen.VIDEO_NAV_TARGET_CID_KEY
-                                    ) ?: 0L
-                                    navigateToVideoInNavigation3(
-                                        bvid = vid,
-                                        cid = targetCid,
-                                        coverUrl = "",
-                                        sourceRoute = VideoRoute.base
-                                    )
-                                },
-                                onBgmClick = { bgm ->
-                                    if (bgm.jumpUrl.isNotEmpty()) {
-                                        pushNavigation3Route(ScreenRoutes.Web.createRoute(bgm.jumpUrl, "发现音乐"))
-                                        return@VideoDetailScreen
-                                    }
-
-                                    val auSid = bgm.musicId.removePrefix("au").toLongOrNull()
-                                    if (auSid != null) {
-                                        pushNavigation3Key(BiliPaiNavKey.MusicDetail(auSid))
-                                    } else if (bgm.musicId.startsWith("MA") && videoKey.cid > 0) {
-                                        val title = bgm.musicTitle.ifEmpty { "背景音乐" }
-                                        pushNavigation3Key(
-                                            BiliPaiNavKey.NativeMusic(title, videoKey.bvid, videoKey.cid)
-                                        )
-                                    }
+                            val hideVideoDetailForNativeBackPreview =
+                                nativeVideoBackPreviewVideoKey == videoKey.bvid
+                            Box(
+                                modifier = Modifier.graphicsLayer {
+                                    alpha = if (hideVideoDetailForNativeBackPreview) 0f else 1f
                                 }
-                            )
+                            ) {
+                                VideoDetailScreen(
+                                    bvid = videoKey.bvid,
+                                    coverUrl = videoKey.coverUrl,
+                                    cid = videoKey.cid,
+                                    onUpClick = { mid -> pushNavigation3Route(ScreenRoutes.Space.createRoute(mid)) },
+                                    miniPlayerManager = miniPlayerManager,
+                                    isInPipMode = isInPipMode,
+                                    isVisible = true,
+                                    startInFullscreen = videoKey.fullscreen,
+                                    startAudioFromRoute = videoKey.startAudio,
+                                    autoEnterPortraitFromRoute = videoKey.autoPortrait,
+                                    initialVerticalFromRoute = videoKey.initialVertical,
+                                    resumePositionMsFromRoute = videoKey.resumePositionMs,
+                                    openCommentRootRpidFromRoute = videoKey.commentRootRpid,
+                                    openCommentTargetRpidFromRoute = videoKey.commentTargetRpid,
+                                    sourceRouteForSharedElement = videoKey.sourceRoute,
+                                    isReturningFromDetail = navigation3ReturnSession.isReturningFromDetail,
+                                    isQuickReturningFromDetail = navigation3ReturnSession.isQuickReturnFromDetail,
+                                    onMarkReturningFromDetail = {
+                                        markVideoReturnSession()
+                                    },
+                                    onClearReturningFromDetail = {
+                                        navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                                    },
+                                    transitionEnabled = shouldEnableVideoDetailSharedTransition(
+                                        cardTransitionEnabled = cardTransitionEnabled
+                                    ) && !shouldUseNativeVideoCardTransition(videoKey),
+                                    transitionEnterDurationMillis = navMotionSpec.slowFadeDurationMillis,
+                                    onBack = {
+                                        popVideoDetailWithNativeTransition(
+                                            videoKey = videoKey,
+                                            targetKey = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
+                                        ) {
+                                            navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)
+                                        }
+                                    },
+                                    onHomeClick = {
+                                        popVideoDetailWithNativeTransition(
+                                            videoKey = videoKey,
+                                            targetKey = BiliPaiNavKey.MainHost
+                                        ) {
+                                            // 先把 bottom pager 静默切到 HOME（被详情页遮挡，切换不可见），
+                                            // 再 pop 至 MainHost 触发与系统返回相同的横向过渡。
+                                            val homeIndex = visibleBottomBarItems.indexOf(BottomNavItem.HOME)
+                                            if (homeIndex >= 0) {
+                                                mainBottomPagerState.snapToPage(homeIndex)
+                                            }
+                                            navigation3BackStack = popBiliPaiNavKeyToRoot(navigation3BackStack)
+                                        }
+                                    },
+                                    onNavigateToAudioMode = {
+                                        isNavigatingToAudioMode = true
+                                        pushNavigation3Key(
+                                            BiliPaiNavKey.AudioMode(
+                                                sourceBvid = videoKey.bvid,
+                                                sourceCid = videoKey.cid,
+                                                sourceResumePositionMs = videoKey.resumePositionMs
+                                            )
+                                        )
+                                    },
+                                    onNavigateToSearch = { pushNavigation3Key(BiliPaiNavKey.Search) },
+                                    onSearchKeywordClick = submitSearchKeywordInNavigation3,
+                                    onOpenBilibiliLink = ::openBilibiliLinkInNavigation3,
+                                    onVideoClick = { vid, options ->
+                                        val targetCid = options?.getLong(
+                                            com.android.purebilibili.feature.video.screen.VIDEO_NAV_TARGET_CID_KEY
+                                        ) ?: 0L
+                                        navigateToVideoInNavigation3(
+                                            bvid = vid,
+                                            cid = targetCid,
+                                            coverUrl = "",
+                                            sourceRoute = VideoRoute.base
+                                        )
+                                    },
+                                    onBgmClick = { bgm ->
+                                        if (bgm.jumpUrl.isNotEmpty()) {
+                                            pushNavigation3Route(ScreenRoutes.Web.createRoute(bgm.jumpUrl, "发现音乐"))
+                                            return@VideoDetailScreen
+                                        }
+
+                                        val auSid = bgm.musicId.removePrefix("au").toLongOrNull()
+                                        if (auSid != null) {
+                                            pushNavigation3Key(BiliPaiNavKey.MusicDetail(auSid))
+                                        } else if (bgm.musicId.startsWith("MA") && videoKey.cid > 0) {
+                                            val title = bgm.musicTitle.ifEmpty { "背景音乐" }
+                                            pushNavigation3Key(
+                                                BiliPaiNavKey.NativeMusic(title, videoKey.bvid, videoKey.cid)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         }
                         BiliPaiNavEntryContentRole.ONBOARDING ->
                             com.android.purebilibili.feature.onboarding.OnboardingScreen(
@@ -2608,6 +2624,7 @@ fun AppNavigation(
                     onBack = { performSystemBackAction() },
                     onNativeVideoBackProgress = ::previewNativeVideoBackProgress,
                     onNativeVideoBackCancelled = { _, _ ->
+                        nativeVideoBackPreviewVideoKey = null
                         nativeVideoCardTransitionController?.cancelPreviewClose()
                     },
                     modifier = Modifier.fillMaxSize(),

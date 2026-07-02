@@ -98,7 +98,11 @@ class AppNavigationNavigation3BridgeStructureTest {
 
         assertTrue(source.contains("fun shouldUseNativeVideoCardTransition("))
         assertTrue(videoDetailBranch.contains("!shouldUseNativeVideoCardTransition(videoKey)"))
+        assertTrue(videoDetailBranch.contains("nativeVideoBackPreviewVideoKey == videoKey.bvid"))
+        assertTrue(videoDetailBranch.contains("alpha = if (hideVideoDetailForNativeBackPreview) 0f else 1f"))
         assertTrue(source.contains("previewNativeVideoBackProgress("))
+        assertTrue(source.contains("nativeVideoBackPreviewVideoKey = videoKey.bvid"))
+        assertTrue(source.contains("nativeVideoBackPreviewVideoKey = null"))
         assertTrue(navHostCall.contains("onNativeVideoBackProgress = ::previewNativeVideoBackProgress"))
         assertTrue(navHostCall.contains("onNativeVideoBackCancelled = {"))
     }
