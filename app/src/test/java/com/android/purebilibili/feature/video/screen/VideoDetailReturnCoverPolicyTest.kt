@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class VideoDetailReturnCoverPolicyTest {
 
@@ -24,22 +25,26 @@ class VideoDetailReturnCoverPolicyTest {
             resolveForceCoverOnlyForReturn(
                 forceCoverOnlyOnReturn = false,
                 isReturningFromDetail = true,
-                isExitTransitionInProgress = false,
-                detailShellSharedBoundsEnabled = false
+                isExitTransitionInProgress = false
             )
         )
     }
 
     @Test
-    fun `force cover stays disabled when detail shell owns shared return`() {
-        assertFalse(
+    fun `detail shell shared bounds does not disable return cover visual`() {
+        assertTrue(
             resolveForceCoverOnlyForReturn(
                 forceCoverOnlyOnReturn = true,
                 isReturningFromDetail = true,
-                isExitTransitionInProgress = true,
-                detailShellSharedBoundsEnabled = true
+                isExitTransitionInProgress = true
             )
         )
+        val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+            .readText()
+        val policyBlock = source
+            .substringAfter("internal fun resolveForceCoverOnlyForReturn(")
+            .substringBefore("internal fun shouldUseReturningVideoDetailVisualState")
+        assertFalse(policyBlock.contains("detailShellSharedBoundsEnabled"))
     }
 
     @Test

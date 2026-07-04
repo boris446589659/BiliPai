@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.tween
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -68,13 +67,12 @@ import coil.request.ImageRequest
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.ContainerLevel
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
+import com.android.purebilibili.core.ui.LocalSharedTransitionEnabled
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
-import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoDurationSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey
+import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
+import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.data.model.response.VideoItem
@@ -187,8 +185,23 @@ private fun HomeHeroCarouselCard(
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
-    val hasSharedTransition = sharedTransitionScope != null && animatedVisibilityScope != null
-    val coverSharedEnabled = hasSharedTransition && video.bvid.isNotBlank() && sourceRoute != null
+    val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
+    val useCardShellSharedBounds = LocalSharedTransitionEnabled.current &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null &&
+        video.bvid.isNotBlank() &&
+        !sourceRoute.isNullOrBlank()
+    val cardShellMotionSpec = remember(
+        sourceRoute,
+        useCardShellSharedBounds,
+        sharedTransitionSpeedSettings
+    ) {
+        resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = sourceRoute,
+            transitionEnabled = useCardShellSharedBounds,
+            speedSettings = sharedTransitionSpeedSettings
+        )
+    }
 
     // 屏幕尺寸（用于 CardPositionManager 归一化坐标计算）
     val configuration = LocalConfiguration.current
@@ -236,6 +249,15 @@ private fun HomeHeroCarouselCard(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = video.bvid,
+                sourceRoute = sourceRoute,
+                motionSpec = cardShellMotionSpec,
+                clipShape = cardShape
+            )
             .zIndex(transform.zIndex)
             .graphicsLayer {
                 transformOrigin = TransformOrigin(transform.pivotFractionX, 0.5f)
@@ -253,31 +275,9 @@ private fun HomeHeroCarouselCard(
         Box(modifier = Modifier.fillMaxSize()) {
             val normalizedCoverUrl = remember(video.pic) { FormatUtils.fixImageUrl(video.pic) }
 
-            // cover 共享边界（仅在有共享作用域且 bvid/sourceRoute 有效时启用）
-            val coverModifier = if (coverSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = videoCoverSharedElementKey(
-                                video.bvid,
-                                sourceRoute = sourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            tween(durationMillis = VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS)
-                        },
-                        clipInOverlayDuringTransition = OverlayClip(cardShape)
-                    )
-                }
-            } else {
-                Modifier
-            }
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(coverModifier)
                     .graphicsLayer {
                         translationX = transform.contentParallaxFraction * size.width
                         scaleX = transform.contentScale
@@ -360,7 +360,6 @@ private fun HomeHeroCarouselCard(
                     )
                 }
                 // 统计信息（第二行靠右）
-                val statsSharedEnabled = hasSharedTransition && video.bvid.isNotBlank() && sourceRoute != null
                 if (video.duration > 0 || video.stat.view > 0 || video.stat.danmaku > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
@@ -371,30 +370,13 @@ private fun HomeHeroCarouselCard(
                     var separatorNeeded = false
                     // 时长
                     if (video.duration > 0) {
-                        var durModifier = Modifier.wrapContentSize()
-                        if (statsSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                durModifier = durModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = videoDurationSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        tween(durationMillis = VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS)
-                                    }
-                                )
-                            }
-                        }
                         Text(
                             text = FormatUtils.formatDuration(video.duration),
                             color = Color.White.copy(alpha = 0.65f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
-                            modifier = durModifier
+                            modifier = Modifier.wrapContentSize()
                         )
                         separatorNeeded = true
                     }
@@ -405,30 +387,13 @@ private fun HomeHeroCarouselCard(
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 12.sp
                         )
-                        var viewsModifier = Modifier.wrapContentSize()
-                        if (statsSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                viewsModifier = viewsModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = videoViewsSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        tween(durationMillis = VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS)
-                                    }
-                                )
-                            }
-                        }
                         Text(
                             text = FormatUtils.formatStat(video.stat.view.toLong()) + "播放",
                             color = Color.White.copy(alpha = 0.65f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
-                            modifier = viewsModifier
+                            modifier = Modifier.wrapContentSize()
                         )
                         separatorNeeded = true
                     }
@@ -439,30 +404,13 @@ private fun HomeHeroCarouselCard(
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 12.sp
                         )
-                        var danmakuModifier = Modifier.wrapContentSize()
-                        if (statsSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                danmakuModifier = danmakuModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = videoDanmakuSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        tween(durationMillis = VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS)
-                                    }
-                                )
-                            }
-                        }
                         Text(
                             text = FormatUtils.formatStat(video.stat.danmaku.toLong()) + "弹幕",
                             color = Color.White.copy(alpha = 0.65f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
-                            modifier = danmakuModifier
+                            modifier = Modifier.wrapContentSize()
                         )
                     }
                 }

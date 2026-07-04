@@ -63,6 +63,19 @@ class HomeHeroFlyoutStructureTest {
     }
 
     @Test
+    fun homeHeroCarouselUsesWholeCardShellSharedTransition() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/HomeHeroCarousel.kt")
+
+        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertTrue(source.contains("resolveVideoCardSharedTransitionMotionSpec("))
+        assertTrue(source.contains("LocalSharedTransitionEnabled.current"))
+        assertFalse(source.contains("videoCoverSharedElementKey("))
+        assertFalse(source.contains("videoViewsSharedElementKey("))
+        assertFalse(source.contains("videoDanmakuSharedElementKey("))
+        assertFalse(source.contains("videoDurationSharedElementKey("))
+    }
+
+    @Test
     fun inlinePartitionPageKeepsPartitionVideoSourceInsteadOfHomeFeed() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/HomeScreen.kt")
         val partitionPageSource = source

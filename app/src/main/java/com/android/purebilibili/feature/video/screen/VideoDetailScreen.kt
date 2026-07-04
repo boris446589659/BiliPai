@@ -285,11 +285,10 @@ internal fun resolveForceCoverOnlyForReturn(
     forceCoverOnlyOnReturn: Boolean,
     isReturningFromDetail: Boolean,
     isExitTransitionInProgress: Boolean,
-    transitionEnabled: Boolean = true,
-    detailShellSharedBoundsEnabled: Boolean = false
+    transitionEnabled: Boolean = true
 ): Boolean {
     if (!transitionEnabled) return false
-    if (detailShellSharedBoundsEnabled) return false
+    // 壳体 sharedBounds 只负责整体落位；返回中仍需要封面压住播放器，避免加载完成后的播放器层缩回卡片。
     return forceCoverOnlyOnReturn || isReturningFromDetail
 }
 
@@ -1752,8 +1751,7 @@ fun VideoDetailScreen(
         forceCoverOnlyOnReturn = forceCoverOnlyOnReturn,
         isReturningFromDetail = isReturningFromDetail,
         isExitTransitionInProgress = isExitTransitionInProgress,
-        transitionEnabled = transitionEnabled,
-        detailShellSharedBoundsEnabled = detailShellSharedBoundsEnabled
+        transitionEnabled = transitionEnabled
     )
     val useReturningVideoDetailVisualState = shouldUseReturningVideoDetailVisualState(
         forceCoverOnlyForReturn = forceCoverOnlyForReturn,
