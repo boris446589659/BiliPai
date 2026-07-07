@@ -64,7 +64,7 @@ class PortraitVideoPagerPolicyTest {
             shouldRebindSharedPlayerSurfaceOnAttach(
                 isCurrentPage = true,
                 isPlayerReadyForThisVideo = true,
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 videoWidth = 720,
                 videoHeight = 1280
             )
@@ -77,7 +77,7 @@ class PortraitVideoPagerPolicyTest {
             shouldRebindSharedPlayerSurfaceOnAttach(
                 isCurrentPage = true,
                 isPlayerReadyForThisVideo = true,
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 videoWidth = 0,
                 videoHeight = 1280
             )
@@ -90,7 +90,7 @@ class PortraitVideoPagerPolicyTest {
             shouldRebindSharedPlayerSurfaceOnAttach(
                 isCurrentPage = false,
                 isPlayerReadyForThisVideo = true,
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 videoWidth = 720,
                 videoHeight = 1280
             )

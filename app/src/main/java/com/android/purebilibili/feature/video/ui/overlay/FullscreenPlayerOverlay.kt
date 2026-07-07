@@ -6,7 +6,9 @@ import com.android.purebilibili.feature.video.danmaku.configureAsPassiveDanmakuO
 import com.android.purebilibili.feature.video.playback.policy.shouldHoldPlaybackTransitionPosition
 import com.android.purebilibili.feature.video.player.MiniPlayerManager
 import com.android.purebilibili.feature.video.ui.section.resolveHorizontalSeekDeltaMs
-import com.android.purebilibili.feature.video.ui.section.rebindPlayerSurfaceIfNeeded
+import com.android.purebilibili.feature.video.ui.section.rebindVideoSurfaceViewIfNeeded
+import com.android.purebilibili.feature.video.ui.section.resolveVideoPlayerScalingMode
+import com.android.purebilibili.feature.video.ui.section.VideoPlayerSurfacePresentationHost
 import com.android.purebilibili.feature.video.ui.section.shouldCommitGestureSeek
 import com.android.purebilibili.feature.video.ui.section.shouldKeepVideoPlaybackAwake
 import com.android.purebilibili.feature.video.usecase.applyPlaybackButtonUserAction
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,7 +68,6 @@ import com.android.purebilibili.core.ui.blur.BlurSurfaceType
 import com.android.purebilibili.core.ui.blur.rememberRecoverableHazeState
 import com.android.purebilibili.core.ui.blur.unifiedBlur
 import androidx.media3.common.Player
-import androidx.media3.ui.PlayerView
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.Logger
 import com.android.purebilibili.feature.video.ui.gesture.GestureMode
@@ -121,10 +123,10 @@ internal fun resolveFullscreenPendingGestureSeekPosition(
 }
 
 internal fun shouldRebindFullscreenSurfaceOnResume(
-    hasPlayerView: Boolean,
+    hasPlayerSurface: Boolean,
     hasPlayer: Boolean
 ): Boolean {
-    return hasPlayerView && hasPlayer
+    return hasPlayerSurface && hasPlayer
 }
 
 internal fun resolveFullscreenOverlayExitRequestedOrientation(
@@ -195,7 +197,7 @@ fun FullscreenPlayerOverlay(
     //  画质选择菜单状态
     var showQualityMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    var videoSurfaceRef by remember { mutableStateOf<View?>(null) }
     var keepFullscreenPlaybackAwake by remember(player) {
         mutableStateOf(
             player?.let {
@@ -317,8 +319,13 @@ fun FullscreenPlayerOverlay(
         aspectRatio = fixedFullscreenAspectRatio.toVideoAspectRatio()
     }
     
+    val composeRootView = LocalView.current
+    SideEffect {
+        composeRootView.keepScreenOn = keepFullscreenPlaybackAwake
+    }
+
     // 进入全屏时设置横屏和沉浸式
-    DisposableEffect(lifecycleOwner, player, playerViewRef) {
+    DisposableEffect(lifecycleOwner, player, videoSurfaceRef) {
         val activity = (context as? Activity) ?: return@DisposableEffect onDispose {}
         val window = activity.window
         val originalOrientation = activity.requestedOrientation
@@ -346,15 +353,15 @@ fun FullscreenPlayerOverlay(
         val lifecycleObserver = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 applyImmersiveMode()
-                val view = playerViewRef
+                val surfaceView = videoSurfaceRef
                 val exoPlayer = player
                 if (shouldRebindFullscreenSurfaceOnResume(
-                        hasPlayerView = view != null,
+                        hasPlayerSurface = surfaceView != null,
                         hasPlayer = exoPlayer != null
                     )
                 ) {
-                    rebindPlayerSurfaceIfNeeded(
-                        playerView = view!!,
+                    rebindVideoSurfaceViewIfNeeded(
+                        surfaceView = surfaceView,
                         player = exoPlayer!!
                     )
                     Logger.d("FullscreenPlayer", "🎬 ON_RESUME fullscreen surface rebind applied")
@@ -780,24 +787,17 @@ fun FullscreenPlayerOverlay(
                         )
                 }
 
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            this.player = exoPlayer
-                            useController = false
-                            keepScreenOn = keepFullscreenPlaybackAwake
-                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                            resizeMode = aspectRatio.playerResizeMode
-                            playerViewRef = this
-                        }
-                    },
-                    update = { playerView ->
-                        playerView.player = exoPlayer
-                        playerView.keepScreenOn = keepFullscreenPlaybackAwake
-                        playerView.resizeMode = aspectRatio.playerResizeMode
-                        playerViewRef = playerView
-                    },
-                    modifier = viewportModifier
+                val scalingMode = resolveVideoPlayerScalingMode(aspectRatio)
+                SideEffect {
+                    if (exoPlayer.videoScalingMode != scalingMode) {
+                        exoPlayer.videoScalingMode = scalingMode
+                    }
+                }
+
+                VideoPlayerSurfacePresentationHost(
+                    player = exoPlayer,
+                    modifier = viewportModifier,
+                    onSurfaceViewChanged = { videoSurfaceRef = it },
                 )
 
                 if (danmakuEnabled) {

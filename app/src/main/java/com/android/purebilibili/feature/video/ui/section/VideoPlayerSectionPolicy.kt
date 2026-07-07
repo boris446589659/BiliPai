@@ -2,11 +2,15 @@ package com.android.purebilibili.feature.video.ui.section
 
 import android.view.SurfaceView
 import android.view.TextureView
+import android.view.View
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.android.purebilibili.feature.video.ui.components.GesturePercentMotionDefaults
+import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.android.purebilibili.feature.video.playback.session.PlaybackSeekSessionState
 import com.android.purebilibili.feature.video.playback.session.shouldUsePlaybackSeekSessionPosition
@@ -1106,20 +1110,48 @@ internal fun shouldAutoHidePlayerChromeOnPlaybackStart(
 }
 
 internal fun shouldRebindPlayerSurfaceOnForeground(
-    hasPlayerView: Boolean,
+    hasPlayerSurface: Boolean,
     isInPipMode: Boolean,
     videoWidth: Int,
     videoHeight: Int
 ): Boolean {
-    return hasPlayerView && !isInPipMode
+    return hasPlayerSurface && !isInPipMode
 }
 
 internal fun shouldStartForegroundSurfaceRecovery(
-    hasPlayerView: Boolean,
+    hasPlayerSurface: Boolean,
     shouldBindInlinePlayerView: Boolean,
     isInPipMode: Boolean
 ): Boolean {
-    return hasPlayerView && shouldBindInlinePlayerView && !isInPipMode
+    return hasPlayerSurface && shouldBindInlinePlayerView && !isInPipMode
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun resolveVideoPlayerScalingMode(
+    aspectRatio: VideoAspectRatio
+): @C.VideoScalingMode Int {
+    return when (aspectRatio.playerResizeMode) {
+        AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+        AspectRatioFrameLayout.RESIZE_MODE_FILL ->
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+        else -> C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+    }
+}
+
+internal fun rebindVideoSurfaceViewIfNeeded(
+    surfaceView: View?,
+    player: Player
+) {
+    when (surfaceView) {
+        is TextureView -> {
+            player.clearVideoTextureView(surfaceView)
+            player.setVideoTextureView(surfaceView)
+        }
+        is SurfaceView -> {
+            player.clearVideoSurfaceView(surfaceView)
+            player.setVideoSurfaceView(surfaceView)
+        }
+    }
 }
 
 internal fun shouldKickPlaybackAfterSurfaceRecovery(
@@ -1187,12 +1219,5 @@ internal fun rebindPlayerSurfaceIfNeeded(
         playerView.player = null
     }
     playerView.player = player
-    when (val videoSurface = playerView.videoSurfaceView) {
-        is TextureView -> {
-            player.setVideoTextureView(videoSurface)
-        }
-        is SurfaceView -> {
-            player.setVideoSurfaceView(videoSurface)
-        }
-    }
+    rebindVideoSurfaceViewIfNeeded(playerView.videoSurfaceView, player)
 }

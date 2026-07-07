@@ -44,9 +44,6 @@ import com.bytedance.danmaku.render.engine.DanmakuView
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.view.LayoutInflater
-import android.view.SurfaceView
-import android.view.TextureView
 import android.view.View
 import android.media.AudioManager
 import android.provider.Settings
@@ -103,6 +100,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
@@ -117,7 +115,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.VideoSize
-import androidx.media3.ui.PlayerView
 import com.android.purebilibili.core.store.FullscreenAspectRatio
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.ui.performance.TrackJankStateFlag
@@ -152,7 +149,7 @@ import com.android.purebilibili.feature.video.subtitle.shouldRenderSecondarySubt
 import com.android.purebilibili.feature.video.usecase.playPlayerFromUserAction
 import com.android.purebilibili.feature.video.usecase.seekPlayerFromUserAction
 import com.android.purebilibili.feature.video.usecase.togglePlayerPlaybackFromUserAction
-import com.android.purebilibili.feature.video.util.captureAndSaveVideoScreenshot
+import com.android.purebilibili.feature.video.util.captureAndSaveVideoScreenshotFromSurface
 import com.android.purebilibili.feature.video.playback.session.PlaybackSeekSessionState
 import com.android.purebilibili.feature.video.playback.session.SEEK_PLAYBACK_RECOVERY_DELAY_MS
 import com.android.purebilibili.feature.video.playback.session.shouldAttemptPlaybackRecoveryAfterSeek
@@ -632,6 +629,10 @@ fun VideoPlayerSection(
             )
         )
     }
+    val composeRootView = LocalView.current
+    SideEffect {
+        composeRootView.keepScreenOn = keepVideoPlaybackAwake
+    }
     DisposableEffect(playerState.player) {
         fun updateKeepScreenAwake() {
             keepVideoPlaybackAwake = shouldKeepVideoPlaybackAwake(
@@ -825,7 +826,7 @@ fun VideoPlayerSection(
     var hasAutoHiddenControlsForCurrentVideo by remember(bvid) {
         mutableStateOf(INITIAL_PLAYER_CHROME_AUTO_HIDE_HANDLED)
     }
-    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    var videoSurfaceRef by remember { mutableStateOf<View?>(null) }
     
     // 🔒 [新增] 屏幕锁定状态（全屏时防误触）
     var isScreenLocked by remember { mutableStateOf(false) }
@@ -989,7 +990,7 @@ fun VideoPlayerSection(
     }
 
     DisposableEffect(Unit) {
-        onDispose { playerViewRef = null }
+        onDispose { videoSurfaceRef = null }
     }
 
     LaunchedEffect(gesturePercentDisplay) {
@@ -2029,39 +2030,36 @@ fun VideoPlayerSection(
         LaunchedEffect(
             isFullscreen,
             isInPipMode,
-            playerViewRef,
+            videoSurfaceRef,
             shouldBindInlinePlayerView
         ) {
             val player = playerState.player
             if (!shouldBindInlinePlayerView) {
-                playerViewRef?.player = null
                 return@LaunchedEffect
             }
             val shouldRebindSurface = shouldRebindPlayerSurfaceOnForeground(
-                hasPlayerView = playerViewRef != null,
+                hasPlayerSurface = videoSurfaceRef != null,
                 isInPipMode = isInPipMode,
                 videoWidth = player.videoSize.width,
                 videoHeight = player.videoSize.height
             )
             if (shouldRebindSurface) {
-                playerViewRef?.let { playerView ->
-                    rebindPlayerSurfaceIfNeeded(playerView = playerView, player = player)
-                    Logger.d("VideoPlayerSection") {
-                        "🎬 Foreground surface rebind applied to avoid audio-only resume"
-                    }
+                rebindVideoSurfaceViewIfNeeded(surfaceView = videoSurfaceRef, player = player)
+                Logger.d("VideoPlayerSection") {
+                    "🎬 Foreground surface rebind applied to avoid audio-only resume"
                 }
             }
         }
 
         LaunchedEffect(
             foregroundRecoveryGeneration,
-            playerViewRef,
+            videoSurfaceRef,
             shouldBindInlinePlayerView,
             isInPipMode
         ) {
             if (foregroundRecoveryGeneration <= 0) return@LaunchedEffect
             if (!shouldStartForegroundSurfaceRecovery(
-                    hasPlayerView = playerViewRef != null,
+                    hasPlayerSurface = videoSurfaceRef != null,
                     shouldBindInlinePlayerView = shouldBindInlinePlayerView,
                     isInPipMode = isInPipMode
                 )
@@ -2071,12 +2069,10 @@ fun VideoPlayerSection(
 
             delay(FOREGROUND_SURFACE_RECOVERY_DELAY_MS)
             val player = playerState.player
-            playerViewRef?.let { playerView ->
-                rebindPlayerSurfaceIfNeeded(playerView = playerView, player = player)
-                Logger.d("VideoPlayerSection") {
-                    "🎬 Foreground recovery retry: surface=${playerView.videoSurfaceView?.javaClass?.simpleName}, " +
-                        "pos=${player.currentPosition}, state=${player.playbackState}, playing=${player.isPlaying}"
-                }
+            rebindVideoSurfaceViewIfNeeded(surfaceView = videoSurfaceRef, player = player)
+            Logger.d("VideoPlayerSection") {
+                "🎬 Foreground recovery retry: surface=${videoSurfaceRef?.javaClass?.simpleName}, " +
+                    "pos=${player.currentPosition}, state=${player.playbackState}, playing=${player.isPlaying}"
             }
             if (shouldKickPlaybackAfterSurfaceRecovery(
                     playWhenReady = player.playWhenReady,
@@ -2115,12 +2111,10 @@ fun VideoPlayerSection(
                 "⚠️ Foreground recovery still missing first frame after ${elapsedMs}ms: " +
                     "state=${player.playbackState}, playing=${player.isPlaying}, playWhenReady=${player.playWhenReady}, " +
                     "pos=${player.currentPosition}, advanced=${advancedPositionMs}, buffered=${player.bufferedPosition}, " +
-                    "surface=${playerViewRef?.videoSurfaceView?.javaClass?.simpleName}, viewAttached=${playerViewRef?.isAttachedToWindow}"
+                    "surface=${videoSurfaceRef?.javaClass?.simpleName}, viewAttached=${videoSurfaceRef?.isAttachedToWindow}"
             )
 
-            playerViewRef?.let { playerView ->
-                rebindPlayerSurfaceIfNeeded(playerView = playerView, player = player)
-            }
+            rebindVideoSurfaceViewIfNeeded(surfaceView = videoSurfaceRef, player = player)
             if (shouldKickPlaybackAfterSurfaceRecovery(
                     playWhenReady = player.playWhenReady,
                     isPlaying = player.isPlaying,
@@ -2273,20 +2267,18 @@ fun VideoPlayerSection(
                         Logger.d("VideoPlayerSection") {
                             "🌅 ON_RESUME recovery start: pos=${player.currentPosition}, buffered=${player.bufferedPosition}, " +
                                 "state=${player.playbackState}, playing=${player.isPlaying}, playWhenReady=${player.playWhenReady}, " +
-                                "surface=${playerViewRef?.videoSurfaceView?.javaClass?.simpleName}"
+                                "surface=${videoSurfaceRef?.javaClass?.simpleName}"
                         }
                         val shouldRebindSurface = shouldRebindPlayerSurfaceOnForeground(
-                            hasPlayerView = playerViewRef != null,
+                            hasPlayerSurface = videoSurfaceRef != null,
                             isInPipMode = isInPipMode,
                             videoWidth = player.videoSize.width,
                             videoHeight = player.videoSize.height
                         )
                         if (shouldRebindSurface) {
-                            playerViewRef?.let { playerView ->
-                                rebindPlayerSurfaceIfNeeded(playerView = playerView, player = player)
-                                Logger.d("VideoPlayerSection") {
-                                    "🎬 ON_RESUME surface rebind applied"
-                                }
+                            rebindVideoSurfaceViewIfNeeded(surfaceView = videoSurfaceRef, player = player)
+                            Logger.d("VideoPlayerSection") {
+                                "🎬 ON_RESUME surface rebind applied"
                             }
                         }
                         if (shouldKickPlaybackAfterSurfaceRecovery(
@@ -2403,10 +2395,29 @@ fun VideoPlayerSection(
             animationSpec = tween(revealMotionSpec.surfaceRevealDurationMillis)
         )
 
-        // 1. PlayerView (底层) - key 触发 graphicsLayer 强制更新
-        //  [修复] 添加 isPortraitFullscreen 到 key，确保从全屏返回时重建 PlayerView 并重新绑定 Surface (解决黑屏问题)
-        key(isFlippedHorizontal, isFlippedVertical, isPortraitFullscreen) {
+        // 1. Media3 Compose PlayerSurface（底层）
+        key(isFlippedHorizontal, isFlippedVertical) {
             val viewportAspectRatio = if (isFullscreen) currentAspectRatio else VideoAspectRatio.FIT
+            val boundPlayer = if (shouldBindInlinePlayerView) playerState.player else null
+            val useTextureSurface = shouldUseTextureSurfaceForFlip(
+                isFlippedHorizontal = isFlippedHorizontal,
+                isFlippedVertical = isFlippedVertical
+            )
+            val showInlineSurface = shouldShowInlinePlayerView(
+                isPortraitFullscreen = isPortraitFullscreen,
+                forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
+                shouldKeepCoverForManualStart = keepCoverForManualStart
+            )
+            val keepContentOnReset = shouldKeepInlinePlayerContentOnReset(
+                isPortraitFullscreen = isPortraitFullscreen,
+                forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation
+            )
+            val scalingMode = resolveVideoPlayerScalingMode(viewportAspectRatio)
+            SideEffect {
+                if (boundPlayer != null && boundPlayer.videoScalingMode != scalingMode) {
+                    boundPlayer.videoScalingMode = scalingMode
+                }
+            }
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -2422,82 +2433,25 @@ fun VideoPlayerSection(
                     }
                 }
 
-                AndroidView(
-                    factory = { ctx ->
-                        val useTextureSurface = shouldUseTextureSurfaceForFlip(
-                            isFlippedHorizontal = isFlippedHorizontal,
-                            isFlippedVertical = isFlippedVertical
-                        )
-                        val basePlayerView = if (useTextureSurface) {
-                            LayoutInflater.from(ctx)
-                                .inflate(com.android.purebilibili.R.layout.view_player_texture, null, false) as PlayerView
-                        } else {
-                            PlayerView(ctx)
-                        }
-                        basePlayerView.apply {
-                            playerViewRef = this
-                            player = if (shouldBindInlinePlayerView) playerState.player else null
-                            setKeepContentOnPlayerReset(
-                                shouldKeepInlinePlayerContentOnReset(
-                                    isPortraitFullscreen = isPortraitFullscreen,
-                                    forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation
-                                )
-                            )
-                            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                            useController = false
-                            keepScreenOn = keepVideoPlaybackAwake
-                            resizeMode = viewportAspectRatio.playerResizeMode
-                            visibility = if (shouldShowInlinePlayerView(
-                                    isPortraitFullscreen = isPortraitFullscreen,
-                                    forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
-                                    shouldKeepCoverForManualStart = keepCoverForManualStart
-                                )
-                            ) {
-                                View.VISIBLE
-                            } else {
-                                View.INVISIBLE
-                            }
-                        }
-                    },
-                    update = { playerView ->
-                        playerViewRef = playerView
-                        playerView.player = if (shouldBindInlinePlayerView) playerState.player else null
-                        playerView.setKeepContentOnPlayerReset(
-                            shouldKeepInlinePlayerContentOnReset(
-                                isPortraitFullscreen = isPortraitFullscreen,
-                                forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation
-                            )
-                        )
-                        playerView.resizeMode = viewportAspectRatio.playerResizeMode
-                        playerView.keepScreenOn = keepVideoPlaybackAwake
-                        playerView.visibility = if (shouldShowInlinePlayerView(
-                                isPortraitFullscreen = isPortraitFullscreen,
-                                forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
-                                shouldKeepCoverForManualStart = keepCoverForManualStart
-                            )
-                        ) {
-                            View.VISIBLE
-                        } else {
-                            View.INVISIBLE
-                        }
-                    },
+                VideoPlayerSurfacePresentationHost(
+                    player = boundPlayer,
                     modifier = with(density) {
-                        Modifier
-                            .size(
-                                width = viewportLayout.width.toDp(),
-                                height = viewportLayout.height.toDp()
-                            )
-                            .alpha(playerSurfaceAlpha)
-                            .graphicsLayer {
-                                val revealAwareScaleX = scale * playerSurfaceScale
-                                val revealAwareScaleY = scale * playerSurfaceScale
-                                scaleX = if (isFlippedHorizontal) -revealAwareScaleX else revealAwareScaleX
-                                scaleY = if (isFlippedVertical) -revealAwareScaleY else revealAwareScaleY
-                                translationX = panX
-                                translationY = panY
-                            }
-                    }
+                        Modifier.size(
+                            width = viewportLayout.width.toDp(),
+                            height = viewportLayout.height.toDp()
+                        )
+                    },
+                    keepContentOnReset = keepContentOnReset,
+                    useTextureSurface = useTextureSurface,
+                    surfaceVisible = showInlineSurface,
+                    surfaceRevealAlpha = playerSurfaceAlpha,
+                    surfaceRevealScale = playerSurfaceScale,
+                    isFlippedHorizontal = isFlippedHorizontal,
+                    isFlippedVertical = isFlippedVertical,
+                    panX = panX,
+                    panY = panY,
+                    zoomScale = scale,
+                    onSurfaceViewChanged = { videoSurfaceRef = it },
                 )
             }
         }
@@ -2892,7 +2846,7 @@ fun VideoPlayerSection(
         }
     }
 
-    // 2. DanmakuView (使用 ByteDance DanmakuRenderEngine - 覆盖在 PlayerView 上方)
+    // 2. DanmakuView (使用 ByteDance DanmakuRenderEngine - 覆盖在播放器 surface 上方)
     val shouldShowDanmakuLayer = !forceCoverDuringReturnAnimation && shouldShowDanmakuLayers(
         isInPipMode = isInPipMode,
         danmakuEnabled = danmakuEnabled,
@@ -4316,14 +4270,14 @@ fun VideoPlayerSection(
                 // [New]
                 onSaveCover = onSaveCover,
                 onCaptureScreenshot = {
-                    val playerView = playerViewRef
-                    if (playerView == null) {
+                    val surfaceView = videoSurfaceRef
+                    if (surfaceView == null) {
                         Toast.makeText(context, "截图失败：播放器未就绪", Toast.LENGTH_SHORT).show()
                     } else {
                         scope.launch {
-                            val success = captureAndSaveVideoScreenshot(
+                            val success = captureAndSaveVideoScreenshotFromSurface(
                                 context = context,
-                                playerView = playerView,
+                                surfaceView = surfaceView,
                                 videoWidth = videoSizeState.first,
                                 videoHeight = videoSizeState.second,
                                 videoTitle = uiState.info.title,

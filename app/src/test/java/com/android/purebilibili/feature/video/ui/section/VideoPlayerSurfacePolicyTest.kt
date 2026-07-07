@@ -1,5 +1,7 @@
 package com.android.purebilibili.feature.video.ui.section
 
+import androidx.media3.common.C
+import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -95,6 +97,26 @@ class VideoPlayerSurfacePolicyTest {
                 forceCoverDuringReturnAnimation = false,
                 shouldKeepCoverForManualStart = false
             )
+        )
+    }
+
+    @Test
+    fun `fit aspect ratio uses scale to fit`() {
+        assertEquals(
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT,
+            resolveVideoPlayerScalingMode(VideoAspectRatio.FIT)
+        )
+    }
+
+    @Test
+    fun `fill aspect ratio uses crop scaling`() {
+        assertEquals(
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING,
+            resolveVideoPlayerScalingMode(VideoAspectRatio.FILL)
+        )
+        assertEquals(
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING,
+            resolveVideoPlayerScalingMode(VideoAspectRatio.RATIO_16_9)
         )
     }
 }

@@ -464,7 +464,7 @@ class VideoPlayerSectionPolicyTest {
     fun playerSurfaceRebind_onlyWhenForegroundVideoSurfaceCanRender() {
         assertTrue(
             shouldRebindPlayerSurfaceOnForeground(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 isInPipMode = false,
                 videoWidth = 1920,
                 videoHeight = 1080
@@ -476,7 +476,7 @@ class VideoPlayerSectionPolicyTest {
     fun playerSurfaceRebind_skipsOnlyWhenPipOrPlayerViewMissing() {
         assertFalse(
             shouldRebindPlayerSurfaceOnForeground(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 isInPipMode = true,
                 videoWidth = 1920,
                 videoHeight = 1080
@@ -484,7 +484,7 @@ class VideoPlayerSectionPolicyTest {
         )
         assertTrue(
             shouldRebindPlayerSurfaceOnForeground(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 isInPipMode = false,
                 videoWidth = 0,
                 videoHeight = 1080
@@ -492,7 +492,7 @@ class VideoPlayerSectionPolicyTest {
         )
         assertFalse(
             shouldRebindPlayerSurfaceOnForeground(
-                hasPlayerView = false,
+                hasPlayerSurface = false,
                 isInPipMode = false,
                 videoWidth = 1920,
                 videoHeight = 1080
@@ -504,28 +504,28 @@ class VideoPlayerSectionPolicyTest {
     fun foregroundSurfaceRecovery_runsOnlyForInlineForegroundPlayerView() {
         assertTrue(
             shouldStartForegroundSurfaceRecovery(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 shouldBindInlinePlayerView = true,
                 isInPipMode = false
             )
         )
         assertFalse(
             shouldStartForegroundSurfaceRecovery(
-                hasPlayerView = false,
+                hasPlayerSurface = false,
                 shouldBindInlinePlayerView = true,
                 isInPipMode = false
             )
         )
         assertFalse(
             shouldStartForegroundSurfaceRecovery(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 shouldBindInlinePlayerView = false,
                 isInPipMode = false
             )
         )
         assertFalse(
             shouldStartForegroundSurfaceRecovery(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 shouldBindInlinePlayerView = true,
                 isInPipMode = true
             )

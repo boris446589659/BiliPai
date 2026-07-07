@@ -2167,6 +2167,14 @@ fun VideoDetailScreen(
     val portraitPagerMotionSpec = remember {
         resolveStandalonePortraitPagerMotionSpec()
     }
+    val fullscreenMorphMotionSpec = remember(transitionEnabled) {
+        resolveVideoFullscreenMorphMotionSpec(cardTransitionEnabled = transitionEnabled)
+    }
+    var isFullscreenMorphAnimating by remember { mutableStateOf(false) }
+    var pendingDeferredOrientation by remember { mutableStateOf<Int?>(null) }
+    var fullscreenTransitionPhase by remember {
+        mutableStateOf(VideoFullscreenTransitionPhase.Idle)
+    }
     val shouldAnimatePortraitPager = remember(useSharedPortraitPlayer) {
         shouldAnimateStandalonePortraitPager(useSharedPlayer = useSharedPortraitPlayer)
     }
@@ -2512,8 +2520,26 @@ fun VideoDetailScreen(
         isActivityInMultiWindowMode,
         userRequestedFullscreen,
         manualPortraitHoldActive,
-        isVerticalVideo
+        isVerticalVideo,
+        fullscreenTransitionPhase
     ) {
+        if (
+            shouldDeferOrientationChange(
+                morphMotionSpec = fullscreenMorphMotionSpec,
+                transitionPhase = fullscreenTransitionPhase
+            )
+        ) {
+            if (fullscreenTransitionPhase == VideoFullscreenTransitionPhase.ExitingLandscapeToInline) {
+                val lockOrientation = resolveLandscapeOrientationLockDuringMorph(
+                    currentRequestedOrientation = activity?.requestedOrientation
+                )
+                if (activity?.requestedOrientation != lockOrientation) {
+                    activity?.requestedOrientation = lockOrientation
+                }
+            }
+            return@LaunchedEffect
+        }
+
         val requestedOrientation = resolvePhoneVideoRequestedOrientation(
             autoRotateEnabled = autoRotateEnabled,
             systemAutoRotateEnabled = systemAutoRotateEnabled,
@@ -2569,7 +2595,8 @@ fun VideoDetailScreen(
         useTabletLayout,
         isOrientationDrivenFullscreen,
         manualPortraitHoldActive,
-        isActivityInMultiWindowMode
+        isActivityInMultiWindowMode,
+        fullscreenTransitionPhase
     ) {
         val hostActivity = activity
         if (
@@ -2590,6 +2617,14 @@ fun VideoDetailScreen(
 
         val orientationListener = object : OrientationEventListener(context) {
             override fun onOrientationChanged(orientation: Int) {
+                if (
+                    shouldDeferOrientationChange(
+                        morphMotionSpec = fullscreenMorphMotionSpec,
+                        transitionPhase = fullscreenTransitionPhase
+                    )
+                ) {
+                    return
+                }
                 if (manualPortraitHoldActive) {
                     if (shouldReleasePhoneManualPortraitHold(orientation)) {
                         manualPortraitHoldActive = false
@@ -2940,7 +2975,7 @@ fun VideoDetailScreen(
     // 辅助函数：切换全屏状态
     val toggleFullscreen = {
         val activity = context.findActivity()
-        toggleVideoDetailFullscreen(
+        val plan = planVideoDetailFullscreenToggle(
             activity = activity,
             isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
             isLandscape = isLandscape,
@@ -2949,10 +2984,20 @@ fun VideoDetailScreen(
             fullscreenMode = fullscreenMode,
             isVerticalVideo = isVerticalVideo,
             portraitExperienceEnabled = portraitExperienceEnabled,
-            onEnterPortraitFullscreen = { enterPortraitFullscreen() },
-            onUserRequestedFullscreenChange = { requested -> userRequestedFullscreen = requested },
-            onManualPortraitHoldActiveChange = { active -> manualPortraitHoldActive = active }
+            deferOrientationChange = fullscreenMorphMotionSpec.deferOrientationChange
         )
+        if (plan != null) {
+            if (plan.deferredOrientation != null) {
+                pendingDeferredOrientation = plan.deferredOrientation
+            }
+            applyVideoFullscreenTogglePlan(
+                plan = plan,
+                activity = activity,
+                onEnterPortraitFullscreen = { enterPortraitFullscreen() },
+                onUserRequestedFullscreenChange = { requested -> userRequestedFullscreen = requested },
+                onManualPortraitHoldActiveChange = { active -> manualPortraitHoldActive = active }
+            )
+        }
     }
 
     //  拦截系统返回键：如果是全屏模式，则先退出全屏
@@ -3041,8 +3086,27 @@ fun VideoDetailScreen(
     // 分槽后 Compose 编译器会分别生成合成方法，避免一个方法聚合整页状态。
     @Composable
     fun BoxScope.VideoDetailRouteSheetMainContent() {
-            // 📐 [平板适配] 全屏模式过渡动画（只有手机横屏才进入全屏）
-        if (isFullscreenMode) {
+        val fullscreenPresentationMode = resolveVideoFullscreenPresentationMode(
+            isFullscreenMode = isFullscreenMode,
+            isPortraitFullscreen = isPortraitFullscreen
+        )
+        VideoFullscreenMorphHost(
+            presentationMode = fullscreenPresentationMode,
+            morphMotionSpec = fullscreenMorphMotionSpec,
+            bvid = currentBvid,
+            sharedTransitionScope = rootSharedTransitionScope,
+            animatedVisibilityScope = rootAnimatedVisibilityScope,
+            onTransitionPhaseChanged = { fullscreenTransitionPhase = it },
+            onMorphAnimatingChanged = { isFullscreenMorphAnimating = it },
+            onMorphFinished = {
+                pendingDeferredOrientation?.let { orientation ->
+                    context.findActivity()?.requestedOrientation = orientation
+                }
+                pendingDeferredOrientation = null
+            },
+            modifier = Modifier.fillMaxSize(),
+            landscapeFullscreenContent = {
+            // 📐 [平板适配] 横屏全屏布局
                 val showDanmakuDialog by viewModel.showDanmakuDialog.collectAsStateWithLifecycle()
                 val isSendingDanmaku by viewModel.isSendingDanmaku.collectAsStateWithLifecycle()
                 val composerDrafts by viewModel.composerDrafts.collectAsStateWithLifecycle()
@@ -3190,7 +3254,8 @@ fun VideoDetailScreen(
                     onSubtitleDisplayModePreferenceOverrideChange = { subtitleDisplayModeOverride = it },
                     onSubtitleTrackSelected = viewModel::selectSubtitleTrack
                 )
-            } else {
+            },
+            inlineContent = {
                     //  沉浸式布局：视频延伸到状态栏 + 内容区域
                     //  📐 [大屏适配] 仅 Expanded 使用分栏布局
 
@@ -3859,8 +3924,16 @@ fun VideoDetailScreen(
                     }
                     }  // 📱 手机竖屏布局结束（Column）
                     }  // Box with nested scroll
-                }  // else shouldUseSplitLayout
-            }  // else targetIsLandscape
+                }  // else useTabletLayout（手机竖屏）
+            }
+        )
+        com.android.purebilibili.feature.video.ui.section.VideoPlayerMorphShutterOverlay(
+            visible = com.android.purebilibili.feature.video.ui.section.shouldShowVideoPlayerMorphShutter(
+                morphMotionSpec = fullscreenMorphMotionSpec,
+                transitionPhase = fullscreenTransitionPhase
+            ),
+            modifier = Modifier.fillMaxSize()
+        )
     }
 
     @Composable
@@ -3901,11 +3974,21 @@ fun VideoDetailScreen(
                 "success=${success != null}, isLandscape=$isLandscape")
         }
 
+        val portraitPagerEnterDuration = if (fullscreenMorphMotionSpec.enabled) {
+            fullscreenMorphMotionSpec.portraitPagerEnterDurationMillis
+        } else {
+            portraitPagerMotionSpec.enterDurationMillis
+        }
+        val portraitPagerExitDuration = if (fullscreenMorphMotionSpec.enabled) {
+            fullscreenMorphMotionSpec.portraitPagerExitDurationMillis
+        } else {
+            portraitPagerMotionSpec.exitDurationMillis
+        }
         AnimatedVisibility(
             visible = showPortraitFullscreen && success != null,
             enter = if (shouldAnimatePortraitPager) {
                 fadeIn(
-                    animationSpec = tween(portraitPagerMotionSpec.enterDurationMillis, easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedEnter)
+                    animationSpec = tween(portraitPagerEnterDuration, easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedEnter)
                 )
             } else {
                 androidx.compose.animation.EnterTransition.None
@@ -3913,22 +3996,22 @@ fun VideoDetailScreen(
             exit = if (shouldAnimatePortraitPager) {
                 val exitEasing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedExit
                 val exitSpec = tween<Float>(
-                    durationMillis = portraitPagerMotionSpec.exitDurationMillis,
+                    durationMillis = portraitPagerExitDuration,
                     easing = exitEasing
                 )
                 fadeOut(
                     animationSpec = exitSpec
                 ) + scaleOut(
-                    targetScale = portraitPagerMotionSpec.exitScaleTarget,
+                    targetScale = fullscreenMorphMotionSpec.portraitPagerExitScaleTarget,
                     animationSpec = exitSpec,
                     transformOrigin = TransformOrigin(0.5f, 0f)
                 ) + slideOutVertically(
                     animationSpec = tween(
-                        durationMillis = portraitPagerMotionSpec.exitDurationMillis,
+                        durationMillis = portraitPagerExitDuration,
                         easing = exitEasing
                     ),
                     targetOffsetY = {
-                        -(it * portraitPagerMotionSpec.exitTranslateUpFraction).roundToInt()
+                        -(it * fullscreenMorphMotionSpec.portraitPagerExitTranslateUpFraction).roundToInt()
                     }
                 )
             } else {
@@ -5267,69 +5350,27 @@ private fun toggleVideoDetailFullscreen(
     portraitExperienceEnabled: Boolean,
     onEnterPortraitFullscreen: () -> Unit,
     onUserRequestedFullscreenChange: (Boolean) -> Unit,
-    onManualPortraitHoldActiveChange: (Boolean) -> Unit
+    onManualPortraitHoldActiveChange: (Boolean) -> Unit,
+    deferOrientationChange: Boolean = false
 ) {
-    if (activity == null) return
-
-    val isInMultiWindowMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity.isInMultiWindowMode
-    val isInPictureInPictureMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-        activity.isInPictureInPictureMode
-    if (shouldUseInWindowFullscreenForSystemMultiWindow(
-            isInMultiWindowMode = isInMultiWindowMode,
-            isInPictureInPictureMode = isInPictureInPictureMode,
-            isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
-            isFullscreenMode = isFullscreenMode
-        )
-    ) {
-        onUserRequestedFullscreenChange(true)
-        onManualPortraitHoldActiveChange(false)
-        return
-    }
-
-    if (isOrientationDrivenFullscreen && isInMultiWindowMode && isFullscreenMode) {
-        onUserRequestedFullscreenChange(false)
-        onManualPortraitHoldActiveChange(false)
-        return
-    }
-
-    if (!isOrientationDrivenFullscreen) {
-        val nextRequestedFullscreen = !isFullscreenMode
-        onUserRequestedFullscreenChange(nextRequestedFullscreen)
-        if (!nextRequestedFullscreen &&
-            isCompactDevice &&
-            fullscreenMode == com.android.purebilibili.core.store.FullscreenMode.VERTICAL
-        ) {
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
-        return
-    }
-
-    if (isLandscape) {
-        onUserRequestedFullscreenChange(false)
-        onManualPortraitHoldActiveChange(true)
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        return
-    }
-
-    val targetOrientation = resolvePhoneFullscreenEnterOrientation(
+    val plan = planVideoDetailFullscreenToggle(
+        activity = activity,
+        isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
+        isLandscape = isLandscape,
+        isFullscreenMode = isFullscreenMode,
+        isCompactDevice = isCompactDevice,
         fullscreenMode = fullscreenMode,
-        isVerticalVideo = isVerticalVideo
-    ) ?: ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-
-    if (shouldEnterPortraitFullscreenOnFullscreenToggle(
-            targetOrientation = targetOrientation,
-            portraitExperienceEnabled = portraitExperienceEnabled
-        )
-    ) {
-        onUserRequestedFullscreenChange(false)
-        onManualPortraitHoldActiveChange(false)
-        onEnterPortraitFullscreen()
-        return
-    }
-
-    onUserRequestedFullscreenChange(true)
-    onManualPortraitHoldActiveChange(false)
-    activity.requestedOrientation = targetOrientation
+        isVerticalVideo = isVerticalVideo,
+        portraitExperienceEnabled = portraitExperienceEnabled,
+        deferOrientationChange = deferOrientationChange
+    ) ?: return
+    applyVideoFullscreenTogglePlan(
+        plan = plan,
+        activity = activity,
+        onEnterPortraitFullscreen = onEnterPortraitFullscreen,
+        onUserRequestedFullscreenChange = onUserRequestedFullscreenChange,
+        onManualPortraitHoldActiveChange = onManualPortraitHoldActiveChange
+    )
 }
 
 internal fun resolveNextPlayerHeightOffset(

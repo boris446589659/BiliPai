@@ -81,19 +81,19 @@ class FullscreenPlayerOverlayPollingPolicyTest {
     fun foregroundResumeRebindsFullscreenSurface_onlyWhenViewAndPlayerExist() {
         assertTrue(
             shouldRebindFullscreenSurfaceOnResume(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 hasPlayer = true
             )
         )
         assertFalse(
             shouldRebindFullscreenSurfaceOnResume(
-                hasPlayerView = false,
+                hasPlayerSurface = false,
                 hasPlayer = true
             )
         )
         assertFalse(
             shouldRebindFullscreenSurfaceOnResume(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 hasPlayer = false
             )
         )
