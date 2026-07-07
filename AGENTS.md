@@ -77,6 +77,44 @@ Use extra verification when the task touches these areas:
 - If a Gradle/Kotlin task hits daemon or incremental-compilation file-state errors, stop passive polling immediately and switch to a deterministic fallback such as `--no-daemon` or another clean one-shot verification path.
 - Do not keep spinning on long terminal polls once the failure mode is clearly infrastructure-related; report that distinction explicitly and choose the next verification step with the lowest ambiguity.
 
+## Fast local compile (reuse cached Gradle)
+
+When `./gradlew` fails on Gradle wrapper download (common symptom: SSL / zip download errors), reuse the already-downloaded Gradle distribution instead of waiting on a broken wrapper fetch.
+
+1. Locate the cached Gradle binary (example path for Gradle 8.13):
+
+```bash
+GRADLE_BIN="$HOME/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/bin/gradle"
+```
+
+2. Run compile or unit tests directly with that binary. Prefer online mode so dependencies can resolve; add SSL bypass only when your environment requires it:
+
+```bash
+GRADLE_OPTS="-Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true" \
+"$GRADLE_BIN" :app:compileDebugKotlin --no-daemon --no-configuration-cache --console=plain
+```
+
+3. Recommended flags for agent/CI-style checks in this repo:
+
+- `--no-daemon`: avoids stale Kotlin/Gradle daemon state after crashes.
+- `--no-configuration-cache`: avoids long silent `Calculating task graph` stalls on some machines.
+- `--console=plain`: streams readable incremental output; do not pipe through `tail` while waiting for first compiler output.
+
+4. Targeted verification examples:
+
+```bash
+"$GRADLE_BIN" :app:testDebugUnitTest --tests 'com.android.purebilibili.core.ui.blur.BlurIntensityVisualPolicyTest' --no-daemon --no-configuration-cache
+"$GRADLE_BIN" :app:compileDebugKotlin --no-daemon --no-configuration-cache
+```
+
+5. If the cached distribution path differs, list available installs with:
+
+```bash
+ls "$HOME/.gradle/wrapper/dists/"
+```
+
+Pick the newest `gradle-*-bin/*/gradle-*/bin/gradle` that matches the wrapper version in `gradle/wrapper/gradle-wrapper.properties`.
+
 ## ADB and local device flow
 
 - Confirm a device first: `adb devices`
