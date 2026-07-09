@@ -47,6 +47,16 @@ class SettingsSubpageChromeStructureTest {
         assertFalse(source.contains("cardContainer()"))
     }
 
+    @Test
+    fun permissionSettingsScreen_usesExternalScrollHostForScrollableContent() {
+        val source = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/settings/screen/PermissionSettingsScreen.kt",
+        )
+
+        assertTrue(source.contains("scrollHost = SettingsPageScrollHost.External"))
+        assertTrue(source.contains(".verticalScroll("))
+    }
+
     private fun loadSource(path: String): String {
         val normalizedPath = path.removePrefix("app/")
         val sourceFile = listOf(

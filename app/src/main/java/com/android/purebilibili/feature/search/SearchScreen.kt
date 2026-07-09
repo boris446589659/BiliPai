@@ -2295,14 +2295,14 @@ private fun SearchResultTypeTabRow(
                 onClick = { onTabClick(index, type) },
                 interactionSource = remember { MutableInteractionSource() },
                 selectedContentColor = MaterialTheme.colorScheme.onSurface,
-                unselectedContentColor = MaterialTheme.colorScheme.outline,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.height(44.dp)
             ) {
                 Text(
                     text = type.displayName,
                     fontSize = 13.sp,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
             }

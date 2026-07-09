@@ -46,6 +46,7 @@ import com.android.purebilibili.core.theme.iOSPurple
 import com.android.purebilibili.core.theme.iOSTeal
 import com.android.purebilibili.core.theme.LocalAndroidNativeVariant
 import com.android.purebilibili.core.theme.LocalUiPreset
+import com.android.purebilibili.feature.settings.SettingsPageScrollHost
 
 /**
  *  权限管理页面
@@ -68,6 +69,7 @@ fun PermissionSettingsScreen(
             onBack = onBack,
             backContentDescription = backLabel,
             bottomContentPadding = bottomPadding,
+            scrollHost = SettingsPageScrollHost.External,
         ) {
             PermissionSettingsContent()
         }
