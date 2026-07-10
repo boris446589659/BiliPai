@@ -8,6 +8,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -53,8 +54,8 @@ internal class QqMusicLyricsProvider(
         val keyword = urlEncode("${query.title} ${query.artist}")
         return parseQqCandidates(
             client.getBody(
-                "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?p=1&n=10&w=$keyword&format=json",
-                mapOf("Referer" to "https://y.qq.com/")
+                "https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg?key=$keyword&format=json",
+                qqHeaders
             )
         )
     }
@@ -63,8 +64,15 @@ internal class QqMusicLyricsProvider(
         return parseQqLyrics(
             client.getBody(
                 "https://i.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=${urlEncode(candidate.remoteId)}&g_tk=5381&format=json&inCharset=utf8&outCharset=utf-8&nobase64=1",
-                mapOf("Referer" to "https://y.qq.com/")
+                qqHeaders
             )
+        )
+    }
+
+    private companion object {
+        val qqHeaders = mapOf(
+            "Referer" to "https://y.qq.com/",
+            "User-Agent" to "Mozilla/5.0"
         )
     }
 }
@@ -78,7 +86,7 @@ internal class KugouLyricsProvider(
         val keyword = urlEncode("${query.title} ${query.artist}")
         return parseKugouCandidates(
             client.getBody(
-                "https://mobilecdn.kugou.com/api/v3/search/song?api_ver=1&area_code=1&correct=1&pagesize=10&plat=2&tag=1&sver=5&showtype=10&page=1&keyword=$keyword&version=8990",
+                "https://songsearch.kugou.com/song_search_v2?keyword=$keyword&page=1&pagesize=10&platform=WebFilter",
                 kugouHeaders
             )
         )
@@ -132,14 +140,20 @@ internal fun parseNeteaseLyrics(body: String): RawLyrics {
 }
 
 internal fun parseQqCandidates(body: String): List<LyricCandidate> {
-    val songs = lyricsJson.parseToJsonElement(body).jsonObject["data"]?.jsonObject
-        ?.get("song")?.jsonObject?.get("list")?.jsonArray.orEmpty()
+    val songNode = lyricsJson.parseToJsonElement(body).jsonObject["data"]?.jsonObject
+        ?.get("song")?.jsonObject
+    val songs = songNode?.get("list")?.jsonArray
+        ?: songNode?.get("itemlist")?.jsonArray
+        ?: emptyList()
     return songs.mapNotNull { element ->
         val song = element.jsonObject
-        val id = song["songmid"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-        val title = song["songname"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-        val artist = song["singer"]?.jsonArray?.firstOrNull()?.jsonObject
-            ?.get("name")?.jsonPrimitive?.contentOrNull.orEmpty()
+        val id = song.stringValue("songmid", "mid") ?: return@mapNotNull null
+        val title = song.stringValue("songname", "name") ?: return@mapNotNull null
+        val artist = when (val singer = song["singer"]) {
+            is JsonArray -> singer.firstOrNull()?.jsonObject
+                ?.get("name")?.jsonPrimitive?.contentOrNull.orEmpty()
+            else -> singer?.jsonPrimitive?.contentOrNull.orEmpty()
+        }
         val durationSeconds = song["interval"]?.jsonPrimitive?.longOrNull ?: 0L
         LyricCandidate(LyricSource.QQ_MUSIC, id, title, artist, durationSeconds * 1_000L)
     }
@@ -156,17 +170,27 @@ internal fun parseQqLyrics(body: String): RawLyrics {
 internal fun parseKugouCandidates(body: String): List<LyricCandidate> {
     val root = lyricsJson.parseToJsonElement(body).jsonObject
     if (root["status"]?.jsonPrimitive?.intOrNull != 1) return emptyList()
-    val songs = root["data"]?.jsonObject?.get("info")?.jsonArray.orEmpty()
+    val data = root["data"]?.jsonObject
+    val songs = data?.get("info")?.jsonArray
+        ?: data?.get("lists")?.jsonArray
+        ?: emptyList()
     return songs.mapNotNull { element ->
         val song = element.jsonObject
-        val id = song["hash"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-        val title = song["songname"]?.jsonPrimitive?.contentOrNull
-            ?: song["filename"]?.jsonPrimitive?.contentOrNull
+        val id = song.stringValue("hash", "FileHash") ?: return@mapNotNull null
+        val title = song.stringValue("songname", "SongName", "filename", "FileName")
             ?: return@mapNotNull null
-        val artist = song["singername"]?.jsonPrimitive?.contentOrNull.orEmpty()
-        val durationSeconds = song["duration"]?.jsonPrimitive?.longOrNull ?: 0L
+        val artist = song.stringValue("singername", "SingerName").orEmpty()
+        val durationSeconds = song.longValue("duration", "Duration") ?: 0L
         LyricCandidate(LyricSource.KUGOU, id, title, artist, durationSeconds * 1_000L)
     }
+}
+
+private fun JsonObject.stringValue(vararg keys: String): String? = keys.firstNotNullOfOrNull { key ->
+    this[key]?.jsonPrimitive?.contentOrNull
+}
+
+private fun JsonObject.longValue(vararg keys: String): Long? = keys.firstNotNullOfOrNull { key ->
+    this[key]?.jsonPrimitive?.longOrNull
 }
 
 internal fun parseKugouDownloadedLyrics(body: String): RawLyrics {
