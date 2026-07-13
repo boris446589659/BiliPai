@@ -403,6 +403,27 @@ class BottomBarLiquidSegmentedControlStructureTest {
     }
 
     @Test
+    fun `dynamic top tabs use bottom bar miuix capture for text and indicator`() {
+        val segmented = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/home/components/BottomBarLiquidSegmentedControl.kt"
+        )
+        val dynamicScreen = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/dynamic/DynamicScreen.kt"
+        )
+        val dynamicTopBar = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/dynamic/components/DynamicTopBar.kt"
+        )
+
+        assertTrue(segmented.contains("miuixBackdrop: MiuixBackdrop? = null"))
+        assertTrue(segmented.contains(".miuixLayerBackdrop(tabsMiuixBackdrop)"))
+        assertTrue(segmented.contains("KernelSuMiuixBottomBarIndicatorLayer("))
+        assertTrue(dynamicScreen.contains("val dynamicChromeBackdrop = rememberMiuixLayerBackdrop()"))
+        assertTrue(dynamicScreen.contains(".miuixLayerBackdrop(dynamicChromeBackdrop)"))
+        assertTrue(dynamicTopBar.contains("miuixBackdrop: MiuixBackdrop? = null"))
+        assertTrue(dynamicTopBar.contains("miuixBackdrop = miuixBackdrop"))
+    }
+
+    @Test
     fun `common list and dynamic tabs pass page backdrop into segmented control`() {
         val commonList = loadSource("app/src/main/java/com/android/purebilibili/feature/list/CommonListScreen.kt")
         val dynamicScreen = loadSource("app/src/main/java/com/android/purebilibili/feature/dynamic/DynamicScreen.kt")
@@ -427,13 +448,13 @@ class BottomBarLiquidSegmentedControlStructureTest {
         assertTrue(commentSortBar.contains("backdrop = backdrop"))
         assertTrue(commentSheetHost.contains("val commentChromeBackdrop = rememberLayerBackdrop()"))
         assertTrue(commentSheetHost.contains(".layerBackdrop(commentChromeBackdrop)"))
-        assertTrue(dynamicScreen.contains("val dynamicChromeBackdrop = rememberLayerBackdrop()"))
-        assertTrue(dynamicScreen.contains(".layerBackdrop(dynamicChromeBackdrop)"))
-        assertTrue(dynamicScreen.contains("backdrop = dynamicChromeBackdrop"))
+        assertTrue(dynamicScreen.contains("val dynamicChromeBackdrop = rememberMiuixLayerBackdrop()"))
+        assertTrue(dynamicScreen.contains(".miuixLayerBackdrop(dynamicChromeBackdrop)"))
+        assertTrue(dynamicScreen.contains("miuixBackdrop = dynamicChromeBackdrop"))
         assertTrue(dynamicScreen.contains("shouldCollapseDynamicTopBar("))
         assertTrue(dynamicScreen.contains("getDynamicTopBarCollapseOnScroll(context)"))
-        assertTrue(dynamicTopBar.contains("backdrop: Backdrop? = null"))
-        assertTrue(dynamicTopBar.contains("backdrop = backdrop"))
+        assertTrue(dynamicTopBar.contains("miuixBackdrop: MiuixBackdrop? = null"))
+        assertTrue(dynamicTopBar.contains("miuixBackdrop = miuixBackdrop"))
         assertTrue(dynamicTopBar.contains("forceLiquidChrome = homeSettings.androidNativeLiquidGlassEnabled"))
         assertTrue(iosSegmented.contains("backdrop: Backdrop? = null"))
         assertTrue(iosSegmented.contains("backdrop = backdrop"))

@@ -3927,7 +3927,7 @@ private fun KernelSuBottomBarShell(
 }
 
 @Composable
-private fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
+internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     visible: Boolean,
     dockContentAlpha: Float,
     indicatorTranslationXPx: Float,
