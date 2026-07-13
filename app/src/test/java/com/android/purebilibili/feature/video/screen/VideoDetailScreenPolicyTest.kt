@@ -178,6 +178,36 @@ class VideoDetailScreenPolicyTest {
     }
 
     @Test
+    fun relatedVideoCardsKeepSharedTransitionAfterParentDetailEntry() {
+        val phoneSource = File(
+            "src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailPhoneContent.kt"
+        ).readText()
+        val contentSource = File(
+            "src/main/java/com/android/purebilibili/feature/video/screen/VideoContentSection.kt"
+        ).readText()
+        val relatedCardSource = contentSource
+            .substringAfter("RelatedVideoItem(")
+            .substringBefore("onClick = openRelatedVideo")
+
+        assertTrue(phoneSource.contains("relatedVideoTransitionEnabled = LocalSharedTransitionEnabled.current"))
+        assertTrue(contentSource.contains("relatedVideoTransitionEnabled: Boolean = transitionEnabled"))
+        assertTrue(relatedCardSource.contains("transitionEnabled = relatedVideoTransitionEnabled"))
+    }
+
+    @Test
+    fun tabletRelatedVideoCardsUseTheSameSharedTransition() {
+        val tabletSource = File(
+            "src/main/java/com/android/purebilibili/feature/video/screen/TabletVideoLayout.kt"
+        ).readText()
+        val cinemaSource = File(
+            "src/main/java/com/android/purebilibili/feature/video/screen/TabletCinemaLayout.kt"
+        ).readText()
+
+        assertTrue(tabletSource.contains("transitionEnabled = LocalSharedTransitionEnabled.current"))
+        assertTrue(cinemaSource.contains("transitionEnabled = LocalSharedTransitionEnabled.current"))
+    }
+
+    @Test
     fun videoCommentTab_removesInlineComposerAndKeepsBottomComposerEntry() {
         val contentSource = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoContentSection.kt")
             .readText()

@@ -360,6 +360,7 @@ fun VideoContentSection(
     onToggleTopComment: (ReplyItem) -> Unit = {},
     // 🔗 [新增] 共享元素过渡开关
     transitionEnabled: Boolean = false,
+    relatedVideoTransitionEnabled: Boolean = transitionEnabled,
     isQuickReturnLimitedForSharedElements: Boolean = false,
     sourceRouteForSharedElement: String? = null,
     // [新增] 收藏夹相关参数
@@ -589,6 +590,7 @@ fun VideoContentSection(
                         onShareClick = onShareClick,
                         contentPadding = PaddingValues(bottom = bottomContentPadding),
                         transitionEnabled = transitionEnabled,
+                        relatedVideoTransitionEnabled = relatedVideoTransitionEnabled,
                         isQuickReturnLimitedForSharedElements = isQuickReturnLimitedForSharedElements,
                         sourceRouteForSharedElement = sourceRouteForSharedElement,
                         ownerFollowerCount = ownerFollowerCount,
@@ -752,6 +754,7 @@ private fun VideoIntroTab(
     onDescriptionUrlClick: ((String) -> Unit)? = null,
     contentPadding: PaddingValues,
     transitionEnabled: Boolean = false,  // 🔗 共享元素过渡开关
+    relatedVideoTransitionEnabled: Boolean = transitionEnabled,
     isQuickReturnLimitedForSharedElements: Boolean = false,
     sourceRouteForSharedElement: String? = null,
     ownerFollowerCount: Int? = null,
@@ -892,7 +895,7 @@ private fun VideoIntroTab(
                     RelatedVideoItem(
                         video = video,
                         isFollowed = video.owner.mid in followingMids,
-                        transitionEnabled = transitionEnabled,
+                        transitionEnabled = relatedVideoTransitionEnabled,
                         showUpBadge = showUpBadge,
                         onClick = openRelatedVideo
                     )
