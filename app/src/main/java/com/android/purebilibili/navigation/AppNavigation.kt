@@ -157,6 +157,7 @@ import com.android.purebilibili.navigation3.pushBiliPaiNavKey
 import com.android.purebilibili.navigation3.resolveBiliPaiBackGestureDecision
 import com.android.purebilibili.navigation3.resolveBiliPaiNavCardSourceDirection
 import com.android.purebilibili.navigation3.resolveBiliPaiNavEntryContentRole
+import com.android.purebilibili.navigation3.resolveNavigation3SaveableStateKey
 import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.shouldUseClassicVideoCardBackHandler
@@ -483,6 +484,7 @@ fun AppNavigation(
             pageCount = { visibleBottomBarItems.size.coerceAtLeast(1) }
         )
         val bottomPagerSaveableStateHolder = rememberSaveableStateHolder()
+        val navigation3SaveableStateHolder = rememberSaveableStateHolder()
         val mainBottomPagerState = rememberMainBottomPagerState(bottomPagerState)
         var bottomPagerContentReady by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -2786,8 +2788,12 @@ fun AppNavigation(
                     activeMainHostRoute = activeBottomTabRoute,
                     isLightBackground = isLightBackground,
                 ) { key ->
-                    VideoCardTransitionBackgroundRouteContent(key) {
-                        RenderNavigationContent(key)
+                    navigation3SaveableStateHolder.SaveableStateProvider(
+                        key = resolveNavigation3SaveableStateKey(key)
+                    ) {
+                        VideoCardTransitionBackgroundRouteContent(key) {
+                            RenderNavigationContent(key)
+                        }
                     }
                 }
                 }

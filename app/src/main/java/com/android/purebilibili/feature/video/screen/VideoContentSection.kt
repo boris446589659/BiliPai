@@ -89,6 +89,7 @@ import com.android.purebilibili.feature.video.ui.components.rememberVideoComment
 import com.android.purebilibili.feature.video.ui.components.resolveReplyItemContentType
 import com.android.purebilibili.feature.video.ui.components.shouldShowReplyTopAction
 import com.android.purebilibili.feature.video.ui.components.shouldShowVideoCommentBackToTop
+import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
 import com.android.purebilibili.feature.video.viewmodel.CommentSortMode
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewDialog
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextContent
@@ -882,16 +883,20 @@ private fun VideoIntroTab(
                 onRelatedVideoClick(video.bvid, navOptions)
             }
 
-            Box(
-                modifier = Modifier.fillMaxWidth()
+            CompositionLocalProvider(
+                LocalVideoCardSharedElementSourceRoute provides "video/${info.bvid}"
             ) {
-                RelatedVideoItem(
-                    video = video,
-                    isFollowed = video.owner.mid in followingMids,
-                    transitionEnabled = transitionEnabled,  // 🔗 传递共享元素开关
-                    showUpBadge = showUpBadge,
-                    onClick = openRelatedVideo
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    RelatedVideoItem(
+                        video = video,
+                        isFollowed = video.owner.mid in followingMids,
+                        transitionEnabled = transitionEnabled,
+                        showUpBadge = showUpBadge,
+                        onClick = openRelatedVideo
+                    )
+                }
             }
         }
     }
